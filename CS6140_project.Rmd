@@ -1,0 +1,20 @@
+---
+title: "CS6140 Project"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Authors
+
+## Description of problem
+
+## Summary of data
+
+## Methods
+
+## Preliminary results
+
+## References
