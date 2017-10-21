@@ -8,13 +8,21 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Authors
+- Abhay Kasturia [MSCS, ]
+- Nakul Cammasamudram [MSCS, third semester]
+- Philip Parker [MSCS, third semester]
+
 
 ## Description of problem
 
+
 ## Summary of data
+
 
 ## Methods
 
+
 ## Preliminary results
+
 
 ## References
