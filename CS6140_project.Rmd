@@ -17,7 +17,35 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ## Summary of data
+```{r}
+training <-
+```
 
+### One-variable summary statistics
+```{r}
+summary(training)
+```
+
+
+### Two-variable summary statistics
+```{r}
+round(cor(training), digits = 2)
+pairs(training)
+```
+
+### Findings
+#### Highly correlated predictors
+
+#### Categorical predictors
+
+#### Missing values
+```{r}
+sum(is.na(training))
+```
+
+
+#### Outliers
+ 
 
 ## Methods
 
@@ -26,3 +54,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ## References
+
+
+
