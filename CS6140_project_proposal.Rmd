@@ -20,7 +20,7 @@ library(ggplot2)
 
 ```{r}
 rm(list=ls())
-listings <- read.csv("./data/listings.csv", sep = ",", header = TRUE)
+listings <- read.csv("./data/listings.csv", sep = ",", header = TRUE, na.strings=c("","NA"))
 head(listings)
 colnames(listings)
 ```
@@ -28,7 +28,7 @@ colnames(listings)
 ### Features to delete 
 
 ```{r}
-features_to_delete = c("id", "listing_url", "scrape_id", "last_scraped", "name", "summary", "space", "description", "experiences_offered", "neighborhood_overview", "notes", "transit", "access", "interaction", "house_rules", "thumbnail_url", "medium_url", "picture_url", "xl_picture_url", "host_id", "host_url", "host_name", "host_since", "host_location", "host_about", "host_response_time", "host_response_rate", "host_acceptance_rate", "host_thumbnail_url", "host_picture_url", "host_verifications", "host_has_profile_pic", "street", "neighbourhood_group_cleansed", "is_location_exact", "amenities", "calendar_updated", "has_availability", "availability_30", "availability_60", "availability_90", "availability_365", "calendar_last_scraped", "first_review", "last_review", "requires_license", "license", "jurisdiction_names", "require_guest_profile_picture", "require_guest_phone_verification", "host_neighbourhood", "neighbourhood", "neighbourhood_cleansed", "city", "state", "market", "smart_location", "country_code", "country", "latitude", "longitude", "maximum_nights", "review_scores_accuracy", "review_scores_cleanliness", "review_scores_checkin", "review_scores_communication", "review_scores_location", "review_scores_value", "square_feet", "weekly_price", "monthly_price", "security_deposit", "cleaning_fee", "extra_people", "host_total_listings_count", "calculated_host_listings_count", "host_listings_count")
+features_to_delete = c("id", "listing_url", "scrape_id", "last_scraped", "name", "summary", "space", "description", "experiences_offered", "neighborhood_overview", "notes", "transit", "access", "interaction", "house_rules", "thumbnail_url", "medium_url", "picture_url", "xl_picture_url", "host_id", "host_url", "host_name", "host_since", "host_location", "host_about", "host_response_time", "host_response_rate", "host_acceptance_rate", "host_thumbnail_url", "host_picture_url", "host_verifications", "host_has_profile_pic", "street", "neighbourhood_group_cleansed", "is_location_exact", "amenities", "calendar_updated", "has_availability", "availability_30", "availability_60", "availability_90", "availability_365", "calendar_last_scraped", "first_review", "last_review", "requires_license", "license", "jurisdiction_names", "require_guest_profile_picture", "require_guest_phone_verification", "host_neighbourhood", "neighbourhood", "neighbourhood_cleansed", "city", "state", "market", "smart_location", "country_code", "country", "latitude", "longitude", "maximum_nights", "review_scores_accuracy", "review_scores_cleanliness", "review_scores_checkin", "review_scores_communication", "review_scores_location", "review_scores_value", "square_feet", "weekly_price", "monthly_price", "security_deposit", "cleaning_fee", "extra_people", "host_total_listings_count", "calculated_host_listings_count", "host_listings_count", "review_scores_rating", "reviews_per_month")
 ```
 
 
@@ -48,17 +48,19 @@ summary(boston)
 ```{r}
 factor_to_numeric <- function(factor_vector) {
   numeric_vector <- factor_vector
-  levels(numeric_vector) <- c(0, 1)
+  levels(numeric_vector) <- seq(0, length(levels(numeric_vector)) - 1, 1)
   numeric_vector <- as.numeric(levels(numeric_vector))[as.integer(numeric_vector)]
   return(numeric_vector)
 }
 
+# True/False values
 boston$price <- as.numeric(gsub(",", "", substr(boston$price, 2, length(boston$price) - 1)))
 boston$host_is_superhost <- factor_to_numeric(boston$host_is_superhost)
 boston$instant_bookable <- factor_to_numeric(boston$instant_bookable)
 boston$host_identity_verified <- factor_to_numeric(boston$host_identity_verified)
 boston$is_business_travel_ready <- factor_to_numeric(boston$is_business_travel_ready)
 
+# Other categorical variables
 ```
 
 ### Price distribution
@@ -94,7 +96,6 @@ summary(boston_training)
 ### Two-variable summary statistics
 ```{r}
 round(cor(boston_training), digits = 2)
-pairs(boston_training)
 ```
 
 ### Findings
