@@ -8,6 +8,23 @@ author: "Abhay Kasturia, Nakul Cammasamudram, Philip Parker"
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+```{r, include=FALSE}
+# Import Data
+
+reprocess = TRUE
+if (file.exists("./data/boston_data.csv") || reprocess) {
+  boston.data <- read.csv("./data/boston_data.csv", sep = ",", header = TRUE)
+} else {
+  full.data <- read.csv("./data/listings.csv", sep = ",", header = TRUE)
+  
+  features_to_delete <- c("amenities", "id", "listing_url", "scrape_id", "last_scraped", "name", "summary", "space", "description", "experiences_offered", "neighborhood_overview", "notes", "transit", "access", "interaction", "house_rules", "thumbnail_url", "medium_url", "picture_url", "xl_picture_url", "host_id", "host_url", "host_name", "host_since", "host_location", "host_about", "host_response_time", "host_response_rate", "host_acceptance_rate", "host_thumbnail_url", "host_picture_url", "host_verifications", "host_has_profile_pic", "street", "neighbourhood_group_cleansed", "is_location_exact", "amenities", "calendar_updated", "has_availability", "availability_30", "availability_60", "availability_90", "availability_365", "calendar_last_scraped", "first_review", "last_review", "requires_license", "license", "jurisdiction_names", "require_guest_profile_picture", "require_guest_phone_verification", "host_neighbourhood", "neighbourhood", "neighbourhood_cleansed", "city", "state", "market", "smart_location", "country_code", "country", "latitude", "longitude", "maximum_nights", "review_scores_accuracy", "review_scores_cleanliness", "review_scores_checkin", "review_scores_communication", "review_scores_location", "review_scores_value", "square_feet", "weekly_price", "monthly_price", "security_deposit", "cleaning_fee", "extra_people", "host_total_listings_count", "calculated_host_listings_count", "host_listings_count")
+  
+  boston.data <- full.data %>% select(-one_of(features_to_delete))
+  boston.data$price <- as.numeric(gsub(",", "", substr(boston.data$price, 2, length(boston.data$price) - 1)))
+  write.csv(boston.data, file = "./data/boston_data.csv")
+}
+```
+
 
 ## Overview
 
@@ -38,29 +55,29 @@ The Inside Airbnb project by Murray Cox has collected public Airbnb listing data
 
 ## Dataset: initial data analysis
 ### One-variable summary statistics
-```{r}
-summary(training)
-```
+
+![](./images/one-var-summary.png)
+
 
 
 ## Dataset: initial data analysis (cont.)
 ### Two-variable summary statistics
+
 ```{r}
-round(cor(training), digits = 2)
+cor(boston.data)
 ```
+
 
 
 ## Dataset: initial data analysis (cont.)
 ### Two-variable summary statistics (cont.)
-```{r}
-pairs(training)
-```
+
 
 
 ## Dataset: initial data analysis (cont.)
 ### Missing values
 ```{r}
-sum(is.na(training))
+sum(is.na(boston.data))
 ```
 
 
