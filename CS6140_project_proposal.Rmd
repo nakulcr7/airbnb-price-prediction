@@ -46,13 +46,25 @@ summary(boston)
 
 ### Clean data
 ```{r}
+factor_to_numeric <- function(factor_vector) {
+  numeric_vector <- factor_vector
+  levels(numeric_vector) <- c(0, 1)
+  numeric_vector <- as.numeric(levels(numeric_vector))[as.integer(numeric_vector)]
+  return(numeric_vector)
+}
+
 boston$price <- as.numeric(gsub(",", "", substr(boston$price, 2, length(boston$price) - 1)))
+boston$host_is_superhost <- factor_to_numeric(boston$host_is_superhost)
+boston$instant_bookable <- factor_to_numeric(boston$instant_bookable)
+boston$host_identity_verified <- factor_to_numeric(boston$host_identity_verified)
+boston$is_business_travel_ready <- factor_to_numeric(boston$is_business_travel_ready)
+
 ```
 
 ### Price distribution
 ```{r}
 class(boston$price)
-p <- ggplot(data = boston, aes(listings$neighbourhood, boston$price, ylab="hey"))
+p <- ggplot(data = boston, aes(boston$zipcode, boston$price, ylab="hey"))
 p + geom_bar(stat = "identity")
 ```
 
