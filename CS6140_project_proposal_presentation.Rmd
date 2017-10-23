@@ -8,20 +8,73 @@ author: "Abhay Kasturia, Nakul Cammasamudram, Philip Parker"
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+```{r}
+library(dummies)
+```
+
 ```{r, include=FALSE}
 # Import Data
 
+# Choose whether to force reprocessing of data
 reprocess = TRUE
-if (file.exists("./data/boston_data.csv") || reprocess) {
-  boston.data <- read.csv("./data/boston_data.csv", sep = ",", header = TRUE)
+
+if (file.exists("./data/boston_data.csv") && !reprocess) {
+  # Read in existing data from file
+  boston.data <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  
 } else {
-  full.data <- read.csv("./data/listings.csv", sep = ",", header = TRUE)
+  # Read in full dataset
+  full.data <- read.csv("./data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
-  features_to_delete <- c("amenities", "id", "listing_url", "scrape_id", "last_scraped", "name", "summary", "space", "description", "experiences_offered", "neighborhood_overview", "notes", "transit", "access", "interaction", "house_rules", "thumbnail_url", "medium_url", "picture_url", "xl_picture_url", "host_id", "host_url", "host_name", "host_since", "host_location", "host_about", "host_response_time", "host_response_rate", "host_acceptance_rate", "host_thumbnail_url", "host_picture_url", "host_verifications", "host_has_profile_pic", "street", "neighbourhood_group_cleansed", "is_location_exact", "amenities", "calendar_updated", "has_availability", "availability_30", "availability_60", "availability_90", "availability_365", "calendar_last_scraped", "first_review", "last_review", "requires_license", "license", "jurisdiction_names", "require_guest_profile_picture", "require_guest_phone_verification", "host_neighbourhood", "neighbourhood", "neighbourhood_cleansed", "city", "state", "market", "smart_location", "country_code", "country", "latitude", "longitude", "maximum_nights", "review_scores_accuracy", "review_scores_cleanliness", "review_scores_checkin", "review_scores_communication", "review_scores_location", "review_scores_value", "square_feet", "weekly_price", "monthly_price", "security_deposit", "cleaning_fee", "extra_people", "host_total_listings_count", "calculated_host_listings_count", "host_listings_count")
+  # Select features to keep
+  features_to_keep <- c("host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
+  boston.data.raw <- full.data[ , features_to_keep, drop=FALSE]
   
-  boston.data <- full.data %>% select(-one_of(features_to_delete))
-  boston.data$price <- as.numeric(gsub(",", "", substr(boston.data$price, 2, length(boston.data$price) - 1)))
-  write.csv(boston.data, file = "./data/boston_data.csv")
+  # Omit NA values
+  boston.data <- na.omit(boston.data.raw)
+  
+  # Correct feature datatypes
+  ## Remove categorical columns to be re-added
+  categorical <- c("host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "bed_type", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
+  boston <- boston.data %>% select(-one_of(categorical))
+  
+  ## host_is_superhost
+  boston <- cbind(boston, host_is_superhost=dummy(boston.data$host_is_superhost, sep="_")[ , -1])
+  
+  ## host_identity_verified
+  boston <- cbind(boston, host_identity_verified=dummy(boston.data$host_identity_verified, sep="_")[ , -1])
+  
+  ## instant_bookable
+  boston <- cbind(boston, instant_bookable=dummy(boston.data$instant_bookable, sep="_")[ , -1])
+  
+  ## is_business_travel_ready
+  boston <- cbind(boston, is_business_travel_ready=dummy(boston.data$is_business_travel_ready, sep="_")[ , -1])
+  
+  ## zipcode
+  temp <- data.frame(dummy(boston.data$zipcode))[ , -1]
+  boston <- cbind(boston, temp)
+  
+  ## property_type
+  temp <- data.frame(dummy(boston.data$property_type))[ , -1]
+  boston <- cbind(boston, temp)
+  
+  ## room_type
+  temp <- data.frame(dummy(boston.data$room_type))[ , -1]
+  boston <- cbind(boston, temp)
+  
+  ## bed_type
+  temp <- data.frame(dummy(boston.data$bed_type))[ , -1]
+  boston <- cbind(boston, temp)
+  
+  ## cancellation_policy
+  temp <- data.frame(dummy(boston.data$cancellation_policy))[ , -1]
+  boston <- cbind(boston, temp)
+  
+  ## price
+  boston$price <- as.numeric(gsub(",", "", substr(boston$price, 2, length(boston$price) - 1)))
+  
+  # Save data
+  write.csv(boston, file = "./data/boston_data.csv")
 }
 ```
 
@@ -58,27 +111,19 @@ The Inside Airbnb project by Murray Cox has collected public Airbnb listing data
 
 ![](./images/one-var-summary.png)
 
-
-
 ## Dataset: initial data analysis (cont.)
 ### Two-variable summary statistics
 
 ```{r}
-cor(boston.data)
+cor(boston)
 ```
-
-
-
-## Dataset: initial data analysis (cont.)
-### Two-variable summary statistics (cont.)
 
 
 
 ## Dataset: initial data analysis (cont.)
 ### Missing values
-```{r}
-sum(is.na(boston.data))
-```
+
+There were 53 rows out of ~5000 with missing values, so we removed them.
 
 
 ## Methods
