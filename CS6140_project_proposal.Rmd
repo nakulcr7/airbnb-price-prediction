@@ -7,6 +7,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(dplyr)
+library(ggplot2)
 ```
 
 ## Authors
@@ -16,14 +17,9 @@ library(dplyr)
 
 
 ## Data Cleaning and Exploration
-```{r}
-rm(list=ls())
-# setwd("~/Workspace/northeastern/cs6140/CS6140_project/")
-boston_cleaned <- read.csv("./data/boston_data.csv", sep = ",", header = TRUE)
-head(boston_cleaned)
-```
 
 ```{r}
+rm(list=ls())
 listings <- read.csv("./data/listings.csv", sep = ",", header = TRUE)
 head(listings)
 colnames(listings)
@@ -41,7 +37,6 @@ features_to_delete = c("id", "listing_url", "scrape_id", "last_scraped", "name",
 boston <- listings %>% select(-one_of(features_to_delete))
 head(boston)
 colnames(boston)
-summary(boston)
 ```
 
 ### Exploration
@@ -49,9 +44,16 @@ summary(boston)
 summary(boston)
 ```
 
+### Clean data
+```{r}
+boston$price <- as.numeric(gsub(",", "", substr(boston$price, 2, length(boston$price) - 1)))
+```
+
 ### Price distribution
 ```{r}
-
+class(boston$price)
+p <- ggplot(data = boston, aes(listings$neighbourhood, boston$price, ylab="hey"))
+p + geom_bar(stat = "identity")
 ```
 
 
