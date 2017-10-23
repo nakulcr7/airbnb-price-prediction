@@ -1,7 +1,11 @@
 ---
-title: "CS6140 Project"
+title: "Code Sandbox"
 output: pdf_document
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -15,11 +19,11 @@ library(dummies)
 # Import Data
 
 # Choose whether to force reprocessing of data
-reprocess = FALSE
+reprocess = TRUE
 
 if (file.exists("./data/boston_data.csv") && !reprocess) {
   # Read in existing data from file
-  boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.data <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
 } else {
   # Read in full dataset
@@ -78,69 +82,27 @@ if (file.exists("./data/boston_data.csv") && !reprocess) {
 ```
 
 
-## Authors
-- Abhay Kasturia [MSCS, fourth semester]
-- Nakul Cammasamudram [MSCS, third semester]
-- Philip Parker [MSCS, third semester]
 
-
-## Description of problem
-
-Airbnb is a popular online company through which property owners can short-term rent their space to consumers as an alternative to hotels. Using data on Airbnb property listings in Boston, we will develop and test methods for determining the optimal price per night an owner should set for their property.
-
-## Summary of data
-
-The Inside Airbnb project by Murray Cox has collected public Airbnb listing data for 40+ popular international cities. We will use the Boston dataset containing ~5000 property listings and their features for the Boston area. (http://insideairbnb.com/get-the-data.html)
-
-### Features
-- *super_host?* (categorical) [yes/no]
-- *verified_host?* (categorical) [yes/no]
-- *zip_code* (categorical) [...]
-- *property_type* (categorical) [House, Apartment, etc.]
-- *room_type* (categorical) [Shared Room, Private Room, etc.]
-- *accomodates* (continuous)
-- *bathrooms* (continuous)
-- *bedrooms* (continuous)
-- *beds* (continuous)
-- *bed_type* (categorical) [Real Bed, Futon, etc.]
-- *minimum_nights* (continuous)
-- *cancelation_policy* (ordered categorical) [Flexible, Moderate, Strict]
-- **price** (continuous) 
-
-
-### One-variable summary statistics
+### Price distribution
 ```{r}
-summary(boston)
+class(boston$price)
+p <- ggplot(data = boston, aes(boston$zipcode, boston$price, ylab="hey"))
+p + geom_bar(stat = "identity")
+```
+
+## Split training and validation data
+```{r}
+ratio <- sample(1:nrow(boston), 0.7*nrow(boston))
+boston_training <- boston[ratio, ]
+boston_validation <- boston[-ratio, ]
 ```
 
 
-### Two-variable summary statistics
-```{r}
-
-```
-
-### Findings
-#### Highly correlated predictors
-
-#### Categorical predictors
-The categorical predictors in the dataset are "host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "bed_type", "instant_bookable", "is_business_travel_ready", and "cancellation_policy".
-
-
-#### Missing values
-
-There were 53 rows with missing values. This was a small number, so we removed them.
 
 
 
-#### Outliers
- 
 
-## Methods
-- We will perform and compare a variety of regression techniques, including linear regression and kernel methods. The comparison between the results of these methods is straightforward.
 
-- We will also consider approaching the problem from a classification point of view, dividing the prices into ordered categorical ranges. Doing this will allow us to investigate the use of classification methods such as logistic regression and tree-based approaches.
-
-- We will research/develop a means of comparing the results of the regression and classification methods.
 
 
 
