@@ -20,6 +20,7 @@ reprocess = TRUE
 if (!file.exists("./data/boston_data.csv") || !file.exists("./data/boston_data_undummied.csv") || reprocess) {
   # Read in existing data from file
   boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.data <- read("./data/boston_data_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
 } else {
   # Read in full dataset
