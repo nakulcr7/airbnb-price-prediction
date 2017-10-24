@@ -114,10 +114,7 @@ The Inside Airbnb project by Murray Cox has collected public Airbnb listing data
 ## Dataset: initial data analysis (cont.)
 ### Two-variable summary statistics
 
-```{r}
-cor(boston)
-```
-
+![](./images/two-var-pairs.png)
 
 
 ## Dataset: initial data analysis (cont.)

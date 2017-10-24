@@ -117,14 +117,22 @@ summary(boston.data)
 
 ### Two-variable summary statistics
 ```{r}
-large_categotical <- c("zipcode", "property_type", "room_type", "bed_type", "cancellation_policy")
-boston.two_summary <- boston.
+two_summary_features <- c("host_is_superhost", "host_identity_verified", "accommodates", "bathrooms", "bedrooms", "beds", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready")
+boston.two_summary <- boston[ ,two_summary_features, drop=FALSE]
+```
 
+```{r}
+round(cor(boston.two_summary), digits=2)
+```
 
+```{r}
+pairs(boston.two_summary)
 ```
 
 ### Findings
 #### Highly correlated predictors
+
+
 
 #### Categorical predictors
 The categorical predictors in the dataset are "host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "bed_type", "instant_bookable", "is_business_travel_ready", and "cancellation_policy".
@@ -133,8 +141,6 @@ The categorical predictors in the dataset are "host_is_superhost", "host_identit
 #### Missing values
 
 There were 53 rows with missing values. This was a small number, so we removed them.
-
-
 
 #### Outliers
  
