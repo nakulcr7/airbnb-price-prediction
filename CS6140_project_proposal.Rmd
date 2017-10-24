@@ -96,9 +96,9 @@ Airbnb is a popular online company through which property owners can short-term 
 The Inside Airbnb project by Murray Cox has collected public Airbnb listing data for 40+ popular international cities. We will use the Boston dataset containing ~5000 property listings and their features for the Boston area. (http://insideairbnb.com/get-the-data.html)
 
 ### Features
-- *super_host?* (categorical) [yes/no]
-- *verified_host?* (categorical) [yes/no]
-- *zip_code* (categorical) [...]
+- *host_is_superhost* (categorical) [yes/no]
+- *host_identity_verified* (categorical) [yes/no]
+- *zipcode* (categorical) [...]
 - *property_type* (categorical) [House, Apartment, etc.]
 - *room_type* (categorical) [Shared Room, Private Room, etc.]
 - *accomodates* (continuous)
@@ -106,10 +106,13 @@ The Inside Airbnb project by Murray Cox has collected public Airbnb listing data
 - *bedrooms* (continuous)
 - *beds* (continuous)
 - *bed_type* (categorical) [Real Bed, Futon, etc.]
+- *guests_included* (continuous)
+- *number_of_reviews* (continuous)
+- *instant_bookable* (categorical) [Yes/No]
+- *is_business_travel_ready* (categorical) [Yes/No]
 - *minimum_nights* (continuous)
 - *cancelation_policy* (ordered categorical) [Flexible, Moderate, Strict]
 - **price** (continuous) 
-
 
 ### One-variable summary statistics
 ```{r}
