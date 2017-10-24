@@ -6,9 +6,7 @@ author: "Abhay Kasturia, Nakul Cammasamudram, Philip Parker"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-```
 
-```{r}
 library(dummies)
 ```
 
@@ -16,11 +14,12 @@ library(dummies)
 # Import Data
 
 # Choose whether to force reprocessing of data
-reprocess = TRUE
+reprocess = FALSE
 
-if (file.exists("./data/boston_data.csv") && !reprocess) {
+if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_undummied.csv") && !reprocess) {
   # Read in existing data from file
-  boston.data <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.data <- read.csv("./data/boston_data_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
 } else {
   # Read in full dataset
@@ -34,6 +33,10 @@ if (file.exists("./data/boston_data.csv") && !reprocess) {
   boston.data <- na.omit(boston.data.raw)
   
   # Correct feature datatypes
+  
+  # price
+  boston.data$price <- as.numeric(gsub(",", "", substr(boston.data$price, 2, length(boston.data$price) - 1)))
+  
   ## Remove categorical columns to be re-added
   categorical <- c("host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "bed_type", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
   boston <- boston.data %>% select(-one_of(categorical))
@@ -70,11 +73,9 @@ if (file.exists("./data/boston_data.csv") && !reprocess) {
   temp <- data.frame(dummy(boston.data$cancellation_policy))[ , -1]
   boston <- cbind(boston, temp)
   
-  ## price
-  boston$price <- as.numeric(gsub(",", "", substr(boston$price, 2, length(boston$price) - 1)))
-  
   # Save data
-  write.csv(boston, file = "./data/boston_data.csv")
+  write.csv(boston, file="./data/boston_data.csv")
+  write.csv(boston.data, file="./data/boston_data_undummied.csv")
 }
 ```
 

@@ -17,7 +17,7 @@ library(dummies)
 # Choose whether to force reprocessing of data
 reprocess = TRUE
 
-if (!file.exists("./data/boston_data.csv") || !file.exists("./data/boston_data_undummied.csv") || reprocess) {
+if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_undummied.csv") && !reprocess) {
   # Read in existing data from file
   boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.data <- read.csv("./data/boston_data_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
@@ -134,9 +134,11 @@ pairs(boston.two_summary)
 ### Findings
 #### Highly correlated predictors
 
+Te
 
 
 #### Categorical predictors
+
 The categorical predictors in the dataset are "host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "bed_type", "instant_bookable", "is_business_travel_ready", and "cancellation_policy".
 
 
