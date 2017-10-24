@@ -1,7 +1,7 @@
 ---
 title: "CS6140 Project Proposal Presentation"
 output: beamer_presentation
-author: "Abhay Kasturia, Nakul Cammasamudram, Philip Parker"
+author: "Abhay Kasturia, Nakul Camasamudram, Philip Parker"
 ---
 
 ```{r setup, include=FALSE}
@@ -24,7 +24,7 @@ if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_und
 } else {
   # Read in full dataset
   full.data <- read.csv("./data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  
+  head(full.data)
   # Select features to keep
   features_to_keep <- c("host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
   boston.data.raw <- full.data[ , features_to_keep, drop=FALSE]
