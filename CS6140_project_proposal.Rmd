@@ -17,7 +17,7 @@ library(dummies)
 # Choose whether to force reprocessing of data
 reprocess = TRUE
 
-if (file.exists("./data/boston_data.csv") && !reprocess) {
+if (!file.exists("./data/boston_data.csv") || !file.exists("./data/boston_data_undummied.csv") || reprocess) {
   # Read in existing data from file
   boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
@@ -74,7 +74,8 @@ if (file.exists("./data/boston_data.csv") && !reprocess) {
   boston <- cbind(boston, temp)
   
   # Save data
-  write.csv(boston, file = "./data/boston_data.csv")
+  write.csv(boston, file="./data/boston_data.csv")
+  write.csv(boston.data, file="./data/boston_data_undummied.csv")
 }
 ```
 
