@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
 library(dummies)
+library(gmapsdistance)
 ```
 
 ```{r, include=FALSE}
@@ -21,64 +22,128 @@ library(dummies)
 # Choose whether to force reprocessing of data
 reprocess = TRUE
 
-if (file.exists("./data/boston_data.csv") && !reprocess) {
+if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_undummied.csv") && !reprocess) {
   # Read in existing data from file
-  boston.data <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.undummied <- read.csv("./data/boston_data_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
 } else {
   # Read in full dataset
   full.data <- read.csv("./data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
+  
   # Select features to keep
-  features_to_keep <- c("host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
+  features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy", "latitude", "longitude")
   boston.data.raw <- full.data[ , features_to_keep, drop=FALSE]
   
-  # Omit NA values
-  boston.data <- na.omit(boston.data.raw)
   
-  # Correct feature datatypes
+  # Clean dataframe
+  ## Omit NA values
+  boston.undummied <- na.omit(boston.data.raw)
+  
+  ## Change price to numeric
+  boston.undummied$price <- as.numeric(gsub(",", "", substr(boston.undummied$price, 2, length(boston.undummied$price) - 1)))
+  
+  ## Rename neighbourhood_cleansed to neighborhood
+  names(boston.undummied)[names(boston.undummied) == "neighbourhood_cleansed"] <- "neighborhood"
+  
+  
+  # Dummy categorical features
   ## Remove categorical columns to be re-added
-  categorical <- c("host_is_superhost", "host_identity_verified", "zipcode", "property_type", "room_type", "bed_type", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
-  boston <- boston.data %>% select(-one_of(categorical))
+  categorical <- c("host_is_superhost", "host_identity_verified", "neighborhood", "property_type", "room_type", "bed_type", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
+  boston <- boston.undummied %>% select(-one_of(categorical))
   
   ## host_is_superhost
-  boston <- cbind(boston, host_is_superhost=dummy(boston.data$host_is_superhost, sep="_")[ , -1])
+  boston <- cbind(boston, host_is_superhost=dummy(boston.undummied$host_is_superhost, sep="_")[ , -1])
   
   ## host_identity_verified
-  boston <- cbind(boston, host_identity_verified=dummy(boston.data$host_identity_verified, sep="_")[ , -1])
+  boston <- cbind(boston, host_identity_verified=dummy(boston.undummied$host_identity_verified, sep="_")[ , -1])
   
   ## instant_bookable
-  boston <- cbind(boston, instant_bookable=dummy(boston.data$instant_bookable, sep="_")[ , -1])
+  boston <- cbind(boston, instant_bookable=dummy(boston.undummied$instant_bookable, sep="_")[ , -1])
   
   ## is_business_travel_ready
-  boston <- cbind(boston, is_business_travel_ready=dummy(boston.data$is_business_travel_ready, sep="_")[ , -1])
-  
-  ## zipcode
-  temp <- data.frame(dummy(boston.data$zipcode))[ , -1]
-  boston <- cbind(boston, temp)
+  boston <- cbind(boston, is_business_travel_ready=dummy(boston.undummied$is_business_travel_ready, sep="_")[ , -1])
   
   ## property_type
-  temp <- data.frame(dummy(boston.data$property_type))[ , -1]
+  temp <- data.frame(dummy(boston.undummied$property_type))[ , -1]
   boston <- cbind(boston, temp)
   
   ## room_type
-  temp <- data.frame(dummy(boston.data$room_type))[ , -1]
+  temp <- data.frame(dummy(boston.undummied$room_type))[ , -1]
   boston <- cbind(boston, temp)
   
   ## bed_type
-  temp <- data.frame(dummy(boston.data$bed_type))[ , -1]
+  temp <- data.frame(dummy(boston.undummied$bed_type))[ , -1]
   boston <- cbind(boston, temp)
   
   ## cancellation_policy
-  temp <- data.frame(dummy(boston.data$cancellation_policy))[ , -1]
+  temp <- data.frame(dummy(boston.undummied$cancellation_policy))[ , -1]
   boston <- cbind(boston, temp)
   
-  ## price
-  boston$price <- as.numeric(gsub(",", "", substr(boston$price, 2, length(boston$price) - 1)))
+  
+  # Construct distinct datasets
+  
+  ## Dataset with neighborhood
+  boston.neighborhood <- boston[ , !(names(boston) %in% c("latitude", "longitude"))]
+  
+  ## Dataset with distance to downtown and airport
+  boston.both <- boston
+  boston.both$ddowntown <- 0
+  boston.both$dairport <- 0
+  
+  ### Calculate driving distance from property location to downtown/airport
+  for (i in 1:4) {
+    loc <- paste(toString(boston.both[i, "latitude"]), "+", toString(boston.both[i, "longitude"]), sep="")
+    boston.both[i, "ddowntown"] <- gmapsdistance(origin=loc, destination="42.3555925+-71.0624982", mode="driving")
+    boston.both[i, "dairport"] <- gmapsdistance(origin=loc, destination="42.3656171+-71.0117542", mode="driving")
+  }
+  
+  ### Remove latitude, longitude, and neighborhood columns
+  boston.both <- boston.both[ , !(names(boston.both) %in% c("latitude", "longitude", "neighborhood"))]
+  
+  ## Dataset with distance to downtown only
+  boston.ddowntown <- boston.both[ , !(names(boston.both) %in% c("dairport"))]
+  
+  ## Dataset with distance to airport only
+  boston.dairport <- boston.both[ , !(names(boston.both) %in% c("ddowntown"))]
+  
+  
+  # Dummy neighborhood 
+  ## neighborhood
+  temp <- data.frame(dummy(boston.undummied$neighborhood))[ , -1]
+  boston <- cbind(boston, temp)
+  boston.neighborhood <- cbind(boston.neighborhood, temp)
+  
   
   # Save data
-  write.csv(boston, file = "./data/boston_data.csv")
+  #write.csv(boston.undummied, file="./data/boston_undummied.csv")
+  #write.csv(boston, file="./data/boston_data.csv")
+  
+  #write.csv(boston.neighborhood, file="./data/boston_neighborhood.csv")
+  #write.csv(boston.ddowntown, file="./data/boston_ddowntown.csv")
+  #write.csv(boston.dairport, file="./data/boston_dairport.csv")
+  #write.csv(boston.dboth, file="./data/boston_dboth.csv")
 }
+```
+
+
+
+
+```{r}
+head(boston.neighborhood)
+head(boston.ddowntown)
+head(boston.dairport)
+head(boston.both)
+
+```
+
+
+```{r}
+
+gmapsdistance(origin = "38.1621328+24.0029257", destination = "37.9908372+23.7383394", mode = "walking")
+
+
 ```
 
 
