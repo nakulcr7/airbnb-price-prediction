@@ -16,11 +16,21 @@ library(dummies)
 library(gmapsdistance)
 ```
 
+
+```{r}
+## Helper functions
+
+normalize_neighborhood_name <- function(name) {
+  return(paste(gsub(" ", "+", name), "Boston", sep = "+"))
+}
+
+```
+
 ```{r, include=FALSE}
 # Import Data
 
 # Choose whether to force reprocessing of data
-reprocess = TRUE
+reprocess = FALSE
 
 if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_undummied.csv") && !reprocess) {
   # Read in existing data from file
@@ -33,7 +43,7 @@ if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_und
   
   
   # Select features to keep
-  features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy", "latitude", "longitude")
+  features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
   boston.data.raw <- full.data[ , features_to_keep, drop=FALSE]
   
   
@@ -87,20 +97,38 @@ if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_und
   ## Dataset with neighborhood
   boston.neighborhood <- boston[ , !(names(boston) %in% c("latitude", "longitude"))]
   
-  ## Dataset with distance to downtown and airport
-  boston.both <- boston
-  boston.both$ddowntown <- 0
-  boston.both$dairport <- 0
+  # Dummy neighborhood 
+  temp <- data.frame(dummy(boston.undummied$neighborhood))[ , -1]
+  boston <- cbind(boston, temp)
+  boston.neighborhood <- cbind(boston.neighborhood, temp)
   
-  ### Calculate driving distance from property location to downtown/airport
-  for (i in 1:4) {
-    loc <- paste(toString(boston.both[i, "latitude"]), "+", toString(boston.both[i, "longitude"]), sep="")
-    boston.both[i, "ddowntown"] <- gmapsdistance(origin=loc, destination="42.3555925+-71.0624982", mode="driving")
-    boston.both[i, "dairport"] <- gmapsdistance(origin=loc, destination="42.3656171+-71.0117542", mode="driving")
+  ## Dataset with distance to downtown and airport
+
+  # Define airport and downtown locations
+  airport_loc = "42.3656171+-71.0117542"
+  downtown_loc = "42.3555925+-71.0624982"
+
+  # Compute distances from dataset neighborhoods to airport and downtown
+  neighborhoods <- paste((unique(boston.undummied$neighborhood)), "Boston", sep="+")
+  neighborhoods <- gsub(" ", "+", neighborhoods)
+  to_airport <- list()
+  to_downtown <- list()
+  for(place in neighborhoods) {
+    cat(place, "\n")
+    to_airport[place] <- gmapsdistance(origin = place, destination = airport_loc, mode = "walking")$Time
+    to_downtown[place] <- gmapsdistance(origin = place, destination = downtown_loc, mode = "walking")$Time
   }
   
-  ### Remove latitude, longitude, and neighborhood columns
-  boston.both <- boston.both[ , !(names(boston.both) %in% c("latitude", "longitude", "neighborhood"))]
+  
+  ### Add walking distance from property neighbourhood to downtown/airport
+  boston.both <- boston.undummied
+  boston.both$ddowntown <- 0
+  boston.both$dairport <- 0
+    
+  for (i in 1:nrow(boston.both)) {
+    boston.both[i, "ddowntown"] <- to_downtown[normalize_neighborhood_name(boston.both[i, "neighborhood"])]
+      boston.both[i, "dairport"] <- to_airport[normalize_neighborhood_name(boston.both[i, "neighborhood"])]
+    }
   
   ## Dataset with distance to downtown only
   boston.ddowntown <- boston.both[ , !(names(boston.both) %in% c("dairport"))]
@@ -108,22 +136,14 @@ if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_und
   ## Dataset with distance to airport only
   boston.dairport <- boston.both[ , !(names(boston.both) %in% c("ddowntown"))]
   
-  
-  # Dummy neighborhood 
-  ## neighborhood
-  temp <- data.frame(dummy(boston.undummied$neighborhood))[ , -1]
-  boston <- cbind(boston, temp)
-  boston.neighborhood <- cbind(boston.neighborhood, temp)
-  
-  
   # Save data
-  #write.csv(boston.undummied, file="./data/boston_undummied.csv")
-  #write.csv(boston, file="./data/boston_data.csv")
+  write.csv(boston.undummied, file="./data/boston_undummied.csv")
+  write.csv(boston, file="./data/boston_data.csv")
   
-  #write.csv(boston.neighborhood, file="./data/boston_neighborhood.csv")
-  #write.csv(boston.ddowntown, file="./data/boston_ddowntown.csv")
-  #write.csv(boston.dairport, file="./data/boston_dairport.csv")
-  #write.csv(boston.dboth, file="./data/boston_dboth.csv")
+  write.csv(boston.neighborhood, file="./data/boston_neighborhood.csv")
+  write.csv(boston.ddowntown, file="./data/boston_ddowntown.csv")
+  write.csv(boston.dairport, file="./data/boston_dairport.csv")
+  write.csv(boston.dboth, file="./data/boston_dboth.csv")
 }
 ```
 
@@ -143,7 +163,6 @@ head(boston.both)
 
 gmapsdistance(origin = "38.1621328+24.0029257", destination = "37.9908372+23.7383394", mode = "walking")
 
-
 ```
 
 
@@ -162,12 +181,54 @@ boston_training <- boston[ratio, ]
 boston_validation <- boston[-ratio, ]
 ```
 
+### Absolute gmaps distances
+```{r}
+latitudes = lapply(boston.undummied$latitude, toString)
+longitudes = lapply(boston.undummied$longitude, toString)
+origin_vec <- paste(latitudes, longitudes, sep="+")
+
+airport = "42.3656171+-71.0117542"
+downtown = "42.3555925+-71.0624982"
+
+airport_vec <- rep(airport, length(origin_vec))
+downtown_vec <- rep(downtown, length(origin_vec))
+
+gmaps_airport <- gmapsdistance(origin = origin_vec, destination = airport_vec, combinations = "pairwise", mode = "walking")
+```
 
 
+### Approximate gmaps distance
+```{r}
+normalize_neighborhood_name <- function(name) {
+  return(paste(gsub(" ", "+", name), "Boston", sep = "+"))
+}
+
+# Define airport and downtown locations
+airport_loc = "42.3656171+-71.0117542"
+downtown_loc = "42.3555925+-71.0624982"
+
+# Compute distances from dataset neighborhoods to airport and downtown
+neighborhoods <- paste((unique(boston.undummied$neighborhood)), "Boston", sep="+")
+neighborhoods <- gsub(" ", "+", neighborhoods)
+to_airport <- list()
+to_downtown <- list()
+for(place in neighborhoods) {
+  cat(place, "\n")
+  to_airport[place] <- gmapsdistance(origin = place, destination = airport_loc, mode = "walking")$Time
+  to_downtown[place] <- gmapsdistance(origin = place, destination = downtown_loc, mode = "walking")$Time
+}
 
 
-
-
+### Add walking distance from property neighbourhood to downtown/airport
+boston.both <- boston.undummied
+boston.both$ddowntown <- 0
+boston.both$dairport <- 0
+  
+for (i in 1:nrow(boston.both)) {
+  boston.both[i, "ddowntown"] <- to_downtown[normalize_neighborhood_name(boston.both[i, "neighborhood"])]
+    boston.both[i, "dairport"] <- to_airport[normalize_neighborhood_name(boston.both[i, "neighborhood"])]
+  }
+```
 
 
 
