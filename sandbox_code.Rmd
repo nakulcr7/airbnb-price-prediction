@@ -30,7 +30,7 @@ normalize_neighborhood_name <- function(name) {
 # Import Data
 
 # Choose whether to force reprocessing of data
-reprocess = FALSE
+reprocess = TRUE
 
 if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_undummied.csv") && !reprocess) {
   # Read in existing data from file
@@ -121,20 +121,20 @@ if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_und
   
   
   ### Add walking distance from property neighbourhood to downtown/airport
-  boston.both <- boston.undummied
-  boston.both$ddowntown <- 0
-  boston.both$dairport <- 0
+  boston.dboth <- boston.undummied
+  boston.dboth$ddowntown <- 0
+  boston.dboth$dairport <- 0
     
-  for (i in 1:nrow(boston.both)) {
-    boston.both[i, "ddowntown"] <- to_downtown[normalize_neighborhood_name(boston.both[i, "neighborhood"])]
-      boston.both[i, "dairport"] <- to_airport[normalize_neighborhood_name(boston.both[i, "neighborhood"])]
+  for (i in 1:nrow(boston.dboth)) {
+    boston.dboth[i, "ddowntown"] <- to_downtown[normalize_neighborhood_name(boston.dboth[i, "neighborhood"])]
+      boston.dboth[i, "dairport"] <- to_airport[normalize_neighborhood_name(boston.dboth[i, "neighborhood"])]
     }
   
   ## Dataset with distance to downtown only
-  boston.ddowntown <- boston.both[ , !(names(boston.both) %in% c("dairport"))]
+  boston.ddowntown <- boston.dboth[ , !(names(boston.dboth) %in% c("dairport"))]
   
   ## Dataset with distance to airport only
-  boston.dairport <- boston.both[ , !(names(boston.both) %in% c("ddowntown"))]
+  boston.dairport <- boston.dboth[ , !(names(boston.dboth) %in% c("ddowntown"))]
   
   # Save data
   write.csv(boston.undummied, file="./data/boston_undummied.csv")
