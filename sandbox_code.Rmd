@@ -216,7 +216,7 @@ log(bestlam.ridge)
 
 ```{r}
 ridge.model <- glmnet(x, y, alpha=0, lambda = bestlam.ridge)
-preds = predict(ridge.mode, s = bestlam.ridge, type = "coefficients")
+preds = predict(ridge.model, s = bestlam.ridge, type = "coefficients")
 
 coef(ridge.model)
 ```
