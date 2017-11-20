@@ -155,6 +155,8 @@ p <- ggplot(data = boston, aes(boston$zipcode, boston$price, ylab="hey"))
 p + geom_bar(stat = "identity")
 ```
 
+
+
 ## Split training and validation data
 ```{r}
 ratio <- sample(1:nrow(boston), 0.7*nrow(boston))
@@ -163,12 +165,59 @@ boston_validation <- boston[-ratio, ]
 ```
 
 
+```{r}
+library(glmnet)
+
+x <- model.matrix(price~.,boston_training)[,-5]
+y <- boston_training$price
+grid = 10^seq(15,-2, length = 100)
+
+lasso.mod <- glmnet(x,y, alpha = 1, lambda = grid)
+plot(lasso.mod, main = "Lasso regression", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+```
 
 
+```{r}
+
+cv.out <- cv.glmnet(x,y,alpha = 1)
+plot(cv.out)
+
+```
+
+```{r}
+
+```
+
+```{r}
+bestlam.lasso <- cv.out$lambda.min
+bestlam.lasso
+log(bestlam.lasso)
+```
+
+```{r}
+lasso.model <- glmnet(x, y, alpha=1, lambda = bestlam.lasso)
+all_pred = predict(lasso.model, s = bestlam.lasso, type = "coefficients")[1:64,]
+all_pred[all_pred==0]
+```
+
+```{r}
+ridge.model = glmnet(x, y, alpha=0, lambda = grid)
+plot(ridge.model, main = "Ridge regression",label = TRUE, xvar = "lambda", xlim = c(-5,20))
+```
 
 
+```{r}
+cv.out <- cv.glmnet(x,y, alpha = 0)
+plot(cv.out)
+bestlam.ridge = cv.out$lambda.min
+bestlam.ridge
+log(bestlam.ridge)
+```
 
+```{r}
+ridge.model <- glmnet(x, y, alpha=0, lambda = bestlam.ridge)
+preds = predict(ridge.mode, s = bestlam.ridge, type = "coefficients")
 
-
-
+coef(ridge.model)
+```
 
