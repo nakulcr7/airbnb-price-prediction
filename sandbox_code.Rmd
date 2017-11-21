@@ -20,9 +20,14 @@ library(hashmap)
 reprocess = TRUE
 reprocess = reprocess || !file.exists("./data/boston_undummied.csv")
 reprocess = reprocess || !file.exists("./data/boston_data.csv")
+
 reprocess = reprocess || !file.exists("./data/boston_ddowntown.csv")
 reprocess = reprocess || !file.exists("./data/boston_dairport.csv")
 reprocess = reprocess || !file.exists("./data/boston_dboth.csv")
+
+reprocess = reprocess || !file.exists("./data/boston_ddowntown_undummied.csv")
+reprocess = reprocess || !file.exists("./data/boston_dairport_undummied.csv")
+reprocess = reprocess || !file.exists("./data/boston_dboth_undummied.csv")
 
 
 if (!reprocess) {
@@ -32,6 +37,9 @@ if (!reprocess) {
   boston.dboth <- read.csv("./data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.ddowntown <- read.csv("./data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.dairport <- read.csv("./data/boston_dairport.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dboth_undummied <- read.csv("./data/boston_dboth_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.ddowntown_undummied <- read.csv("./data/boston_ddowntown_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dairport_undummied <- read.csv("./data/boston_dairport_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
 } else {
   # Read in full dataset
@@ -95,11 +103,16 @@ if (!reprocess) {
   boston.dboth$ddowntown <- 0
   boston.dboth$dairport <- 0
   
+  boston.dboth_undummied <- boston.undummied
+  boston.dboth_undummied$downtown <- 0
+  boston.dboth_undummied$airport <- 0
+  
   ### Calculate driving distance from property location to downtown/airport
   ddowntown = hashmap(levels(boston.undummied$neighborhood), integer(length(levels(boston.undummied$neighborhood))))
   dairport = hashmap(levels(boston.undummied$neighborhood), integer(length(levels(boston.undummied$neighborhood))))
 
   for (i in 1:length(levels(boston.undummied$neighborhood))) {
+    print(i)
     s <- levels(boston.undummied$neighborhood)[[i]]
     s2 <- paste(s, ", Boston MA")
     s2 <- gsub(" ", "+", s2, fixed=TRUE)
@@ -108,19 +121,25 @@ if (!reprocess) {
   }
   
   for (i in 1:nrow(boston.dboth)) {
+    print(i)
     boston.dboth[i, "ddowntown"] <- ddowntown[[boston.undummied$neighborhood[[i]]]]
     boston.dboth[i, "dairport"] <- dairport[[boston.undummied$neighborhood[[i]]]]
+    
+    boston.dboth_undummied[i, "ddowntown"] <- ddowntown[[boston.undummied$neighborhood[[i]]]]
+    boston.dboth_undummied[i, "dairport"] <- dairport[[boston.undummied$neighborhood[[i]]]]
   }
   
   ### Remove neighborhood columns
   boston.dboth <- boston.dboth[ , !(names(boston.dboth) %in% c("neighborhood"))]
+  boston.dboth_undummied <- boston.dboth_undummied[ , !(names(boston.dboth_undummied) %in% c("neighborhood"))]
   
   ## Dataset with distance to downtown only
   boston.ddowntown <- boston.dboth[ , !(names(boston.dboth) %in% c("dairport"))]
+  boston.ddowntown_undummied <- boston.dboth_undummied[ , !(names(boston.dboth_undummied) %in% c("dairport"))]
   
   ## Dataset with distance to airport only
   boston.dairport <- boston.dboth[ , !(names(boston.dboth) %in% c("ddowntown"))]
-  
+  boston.dairport_undummied <- boston.dboth_undummied[ , !(names(boston.dboth_undummied) %in% c("ddowntown"))]
   
   # Dummy neighborhood 
   ## neighborhood
@@ -135,6 +154,10 @@ if (!reprocess) {
   write.csv(boston.ddowntown, file="./data/boston_ddowntown.csv")
   write.csv(boston.dairport, file="./data/boston_dairport.csv")
   write.csv(boston.dboth, file="./data/boston_dboth.csv")
+  
+  write.csv(boston.ddowntown_undummied, file="./data/boston_ddowntown_undummied.csv")
+  write.csv(boston.dairport_undummied, file="./data/boston_dairport_undummied.csv")
+  write.csv(boston.dboth_undummied, file="./data/boston_dboth_undummied.csv")
 }
 ```
 
