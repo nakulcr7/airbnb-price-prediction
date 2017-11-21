@@ -20,6 +20,7 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(visreg)
+library(leaps)
 ```
 
 ## Load Data
@@ -71,7 +72,6 @@ summary(lm1)
 ## GAM model
 gam1 <- gam(price ~ s(dairport, bs="cr"), data=boston.dboth.train)
 summary(gam1)
-# plot(gam1, shade = TRUE)
 ```
 
 ```{r}
@@ -127,14 +127,61 @@ gam3 <- gam(price ~ te(dairport, ddowntown), data=boston.dboth.train)
 summary(gam3)
 ```
 
-### Variable selection within GAM
+## Explore variable selection
 
 ```{r}
-gam4 <- gam(price ~ s(bedrooms, k=5) + s(guests_included) + s(beds) + s(bathrooms) + s(minimum_nights) + s(accommodates) + s(number_of_reviews) + s(ddowntown) + s(dairport), data=boston.dboth.train)
+# Regular subset selection
+reg1 <- regsubsets(price~., data = boston.dboth.train, really.big = T)
+reg1.summary <- summary(reg1)
+
+par(mfrow = c(2,2))
+plot(reg1.summary$rss, xlab = "Number of variables", ylab = "Residual Sum of Squares (RSS)", type = "l")
+plot(reg1.summary$adjr2, xlab = "Number of variables", ylab = "Adjacent R square", type = "l")
+plot(reg1.summary$cp, xlab = "Number of variables", ylab = "CP", type = "l")
+plot(reg1.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
+
+which.min(reg1.summary$bic)
+# Results: property_type, bathrooms, bedrooms, ddowntown, dairport
+```
+
+```{r}
+null <- lm(price~1, data=boston.dboth.train)
+full <- lm(price~., data=boston.dboth.train)
+
+forward_selection <- step(null, scope=list(lower=null, upper=full), direction="forward")
+# Results: price ~ accommodates + neighborhood + bathrooms + property_type + room_type + bedrooms + instant_bookable + host_identity_verified + guests_included + is_business_travel_ready + number_of_reviews
+
+# The same predictors were got when "backward" and "both" directions for steps selctions as well.
+```
+
+
+### GAM based on the variable selection methods above
+
+```{r}
+# Variables selected from subset selection
+gam4 <- gam(price ~ property_type + s(bathrooms) + s(bedrooms, k=5) + s(ddowntown) + s(dairport), data=boston.dboth.train)
 summary(gam4)
 ```
 
 ```{r}
+# Variables selected from forward selection
+gam5 <- gam(price ~ s(accommodates) + neighborhood + s(bathrooms) + property_type + room_type + s(bedrooms, k=5) + instant_bookable + host_identity_verified + s(guests_included) + is_business_travel_ready + s(number_of_reviews), data=boston.dboth.train)
+summary(gam5)
+```
+
+### Variable selection within GAM
+
+```{r}
+gam6 <- gam(price ~ s(bedrooms, k=5) + s(guests_included) + s(beds) + s(bathrooms) + s(minimum_nights) + s(accommodates) + s(number_of_reviews) + s(ddowntown) + s(dairport) + host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + bed_type + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.dboth.train, select=T, method="REML")
+summary(gam6)
+```
+
+```{r}
+gam7 <- gam(price ~ s(bedrooms, k=5) + s(guests_included) + s(beds) + s(bathrooms) + s(minimum_nights) + s(accommodates) + s(number_of_reviews) + room_type + instant_bookable + property_type + host_identity_verified, data=boston.dboth.train, select=T, method="REML")
+summary(gam7)
+```
+
+```{r}
 # Model comparison
-anova(lm2, gam2, gam3, test="Chisq")
+anova(gam4, gam5, gam6, gam7, test="Chisq")
 ```
