@@ -17,7 +17,7 @@ library(hashmap)
 # Import Data
 
 # Choose whether to force reprocessing of data
-reprocess = TRUE
+reprocess = FALSE
 reprocess = reprocess || !file.exists("./data/boston_undummied.csv")
 reprocess = reprocess || !file.exists("./data/boston_data.csv")
 
