@@ -127,6 +127,12 @@ gam3 <- gam(price ~ te(dairport, ddowntown), data=boston.dboth.train)
 summary(gam3)
 ```
 
+### Variable selection within GAM
+
+```{r}
+gam4 <- gam(price ~ s(bedrooms, k=5) + s(guests_included) + s(beds) + s(bathrooms) + s(minimum_nights) + s(accommodates) + s(number_of_reviews) + s(ddowntown) + s(dairport), data=boston.dboth.train)
+summary(gam4)
+```
 
 ```{r}
 # Model comparison
