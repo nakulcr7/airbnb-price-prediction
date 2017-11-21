@@ -5,15 +5,12 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
 
 library(dplyr)
 library(ggplot2)
 library(dummies)
 library(gmapsdistance)
+library(hashmap)
 ```
 
 ```{r, include=FALSE}
@@ -21,11 +18,20 @@ library(gmapsdistance)
 
 # Choose whether to force reprocessing of data
 reprocess = TRUE
+reprocess = reprocess || !file.exists("./data/boston_undummied.csv")
+reprocess = reprocess || !file.exists("./data/boston_data.csv")
+reprocess = reprocess || !file.exists("./data/boston_ddowntown.csv")
+reprocess = reprocess || !file.exists("./data/boston_dairport.csv")
+reprocess = reprocess || !file.exists("./data/boston_dboth.csv")
 
-if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_undummied.csv") && !reprocess) {
+
+if (!reprocess) {
   # Read in existing data from file
-  boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.undummied <- read.csv("./data/boston_data_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dboth <- read.csv("./data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.ddowntown <- read.csv("./data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dairport <- read.csv("./data/boston_dairport.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
 } else {
   # Read in full dataset
@@ -33,7 +39,7 @@ if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_und
   
   
   # Select features to keep
-  features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy", "latitude", "longitude")
+  features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
   boston.data.raw <- full.data[ , features_to_keep, drop=FALSE]
   
   
@@ -83,47 +89,52 @@ if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_und
   
   
   # Construct distinct datasets
-  
-  ## Dataset with neighborhood
-  boston.neighborhood <- boston[ , !(names(boston) %in% c("latitude", "longitude"))]
-  
+
   ## Dataset with distance to downtown and airport
-  boston.both <- boston
-  boston.both$ddowntown <- 0
-  boston.both$dairport <- 0
+  boston.dboth <- boston
+  boston.dboth$ddowntown <- 0
+  boston.dboth$dairport <- 0
   
   ### Calculate driving distance from property location to downtown/airport
-  for (i in 1:4) {
-    loc <- paste(toString(boston.both[i, "latitude"]), "+", toString(boston.both[i, "longitude"]), sep="")
-    boston.both[i, "ddowntown"] <- gmapsdistance(origin=loc, destination="42.3555925+-71.0624982", mode="driving")
-    boston.both[i, "dairport"] <- gmapsdistance(origin=loc, destination="42.3656171+-71.0117542", mode="driving")
+  ddowntown = hashmap(levels(boston.undummied$neighborhood), integer(length(levels(boston.undummied$neighborhood))))
+  dairport = hashmap(levels(boston.undummied$neighborhood), integer(length(levels(boston.undummied$neighborhood))))
+
+  for (i in 1:length(levels(boston.undummied$neighborhood))) {
+    s <- levels(boston.undummied$neighborhood)[[i]]
+    s2 <- paste(s, ", Boston MA")
+    s2 <- gsub(" ", "+", s2, fixed=TRUE)
+    ddowntown[[s]] <- gmapsdistance(origin=s2, destination="42.3555925+-71.0624982", mode="driving")[[2]]
+    dairport[[s]] <- gmapsdistance(origin=s2, destination="42.3656171+-71.0117542", mode="driving")[[2]]
   }
   
-  ### Remove latitude, longitude, and neighborhood columns
-  boston.both <- boston.both[ , !(names(boston.both) %in% c("latitude", "longitude", "neighborhood"))]
+  for (i in 1:nrow(boston.dboth)) {
+    boston.dboth[i, "ddowntown"] <- ddowntown[[boston.undummied$neighborhood[[i]]]]
+    boston.dboth[i, "dairport"] <- dairport[[boston.undummied$neighborhood[[i]]]]
+  }
+  
+  ### Remove neighborhood columns
+  boston.dboth <- boston.dboth[ , !(names(boston.dboth) %in% c("neighborhood"))]
   
   ## Dataset with distance to downtown only
-  boston.ddowntown <- boston.both[ , !(names(boston.both) %in% c("dairport"))]
+  boston.ddowntown <- boston.dboth[ , !(names(boston.dboth) %in% c("dairport"))]
   
   ## Dataset with distance to airport only
-  boston.dairport <- boston.both[ , !(names(boston.both) %in% c("ddowntown"))]
+  boston.dairport <- boston.dboth[ , !(names(boston.dboth) %in% c("ddowntown"))]
   
   
   # Dummy neighborhood 
   ## neighborhood
   temp <- data.frame(dummy(boston.undummied$neighborhood))[ , -1]
   boston <- cbind(boston, temp)
-  boston.neighborhood <- cbind(boston.neighborhood, temp)
   
   
   # Save data
-  #write.csv(boston.undummied, file="./data/boston_undummied.csv")
-  #write.csv(boston, file="./data/boston_data.csv")
+  write.csv(boston.undummied, file="./data/boston_undummied.csv")
+  write.csv(boston, file="./data/boston_data.csv")
   
-  #write.csv(boston.neighborhood, file="./data/boston_neighborhood.csv")
-  #write.csv(boston.ddowntown, file="./data/boston_ddowntown.csv")
-  #write.csv(boston.dairport, file="./data/boston_dairport.csv")
-  #write.csv(boston.dboth, file="./data/boston_dboth.csv")
+  write.csv(boston.ddowntown, file="./data/boston_ddowntown.csv")
+  write.csv(boston.dairport, file="./data/boston_dairport.csv")
+  write.csv(boston.dboth, file="./data/boston_dboth.csv")
 }
 ```
 
@@ -131,20 +142,13 @@ if (file.exists("./data/boston_data.csv") && file.exists("./data/boston_data_und
 
 
 ```{r}
-head(boston.neighborhood)
+
 head(boston.ddowntown)
 head(boston.dairport)
-head(boston.both)
+head(boston.dboth)
 
 ```
 
-
-```{r}
-
-gmapsdistance(origin = "38.1621328+24.0029257", destination = "37.9908372+23.7383394", mode = "walking")
-
-
-```
 
 
 
