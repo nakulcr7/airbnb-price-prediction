@@ -13,16 +13,6 @@ library(gmapsdistance)
 library(hashmap)
 ```
 
-
-```{r}
-## Helper functions
-
-normalize_neighborhood_name <- function(name) {
-  return(paste(gsub(" ", "+", name), "Boston", sep = "+"))
-}
-
-```
-
 ```{r, include=FALSE}
 # Import Data
 
@@ -156,10 +146,11 @@ if (!reprocess) {
   temp <- data.frame(dummy(boston.undummied$neighborhood))[ , -1]
   boston <- cbind(boston, temp)
   
+  
   # Save data
   write.csv(boston.undummied, file="./data/boston_undummied.csv")
   write.csv(boston, file="./data/boston_data.csv")
-
+  
   write.csv(boston.ddowntown, file="./data/boston_ddowntown.csv")
   write.csv(boston.dairport, file="./data/boston_dairport.csv")
   write.csv(boston.dboth, file="./data/boston_dboth.csv")
@@ -182,15 +173,6 @@ head(boston.dboth)
 ```
 
 
-<<<<<<< HEAD
-```{r}
-
-gmapsdistance(origin = "38.1621328+24.0029257", destination = "37.9908372+23.7383394", mode = "walking")
-
-```
-
-=======
->>>>>>> master
 
 
 ### Price distribution
@@ -209,22 +191,7 @@ boston_training <- boston[ratio, ]
 boston_validation <- boston[-ratio, ]
 ```
 
-### Absolute gmaps distances
-```{r}
-latitudes = lapply(boston.undummied$latitude, toString)
-longitudes = lapply(boston.undummied$longitude, toString)
-origin_vec <- paste(latitudes, longitudes, sep="+")
 
-airport = "42.3656171+-71.0117542"
-downtown = "42.3555925+-71.0624982"
-
-<<<<<<< HEAD
-airport_vec <- rep(airport, length(origin_vec))
-downtown_vec <- rep(downtown, length(origin_vec))
-
-gmaps_airport <- gmapsdistance(origin = origin_vec, destination = airport_vec, combinations = "pairwise", mode = "walking")
-```
-=======
 ```{r}
 library(glmnet)
 
@@ -245,32 +212,9 @@ plot(cv.out)
 ```
 
 ```{r}
->>>>>>> master
 
 ```
 
-<<<<<<< HEAD
-### Approximate gmaps distance
-```{r}
-normalize_neighborhood_name <- function(name) {
-  return(paste(gsub(" ", "+", name), "Boston", sep = "+"))
-}
-
-# Define airport and downtown locations
-airport_loc = "42.3656171+-71.0117542"
-downtown_loc = "42.3555925+-71.0624982"
-
-# Compute distances from dataset neighborhoods to airport and downtown
-neighborhoods <- paste((unique(boston.undummied$neighborhood)), "Boston", sep="+")
-neighborhoods <- gsub(" ", "+", neighborhoods)
-to_airport <- list()
-to_downtown <- list()
-for(place in neighborhoods) {
-  cat(place, "\n")
-  to_airport[place] <- gmapsdistance(origin = place, destination = airport_loc, mode = "walking")$Time
-  to_downtown[place] <- gmapsdistance(origin = place, destination = downtown_loc, mode = "walking")$Time
-}
-=======
 ```{r}
 bestlam.lasso <- cv.out$lambda.min
 bestlam.lasso
@@ -282,23 +226,12 @@ lasso.model <- glmnet(x, y, alpha=1, lambda = bestlam.lasso)
 all_pred = predict(lasso.model, s = bestlam.lasso, type = "coefficients")[1:64,]
 all_pred[all_pred==0]
 ```
->>>>>>> master
 
 ```{r}
 ridge.model = glmnet(x, y, alpha=0, lambda = grid)
 plot(ridge.model, main = "Ridge regression",label = TRUE, xvar = "lambda", xlim = c(-5,20))
 ```
 
-### Add walking distance from property neighbourhood to downtown/airport
-boston.both <- boston.undummied
-boston.both$ddowntown <- 0
-boston.both$dairport <- 0
-  
-for (i in 1:nrow(boston.both)) {
-  boston.both[i, "ddowntown"] <- to_downtown[normalize_neighborhood_name(boston.both[i, "neighborhood"])]
-    boston.both[i, "dairport"] <- to_airport[normalize_neighborhood_name(boston.both[i, "neighborhood"])]
-  }
-```
 
 ```{r}
 cv.out <- cv.glmnet(x,y, alpha = 0)
