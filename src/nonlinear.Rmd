@@ -1,0 +1,187 @@
+---
+title: "Nonlinear Models"
+author: "Nakul Camasamudram"
+date: "11/18/2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Generalized Additive Models
+===============================
+
+```{r}
+# Imports
+
+library(mgcv)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(visreg)
+library(leaps)
+```
+
+## Load Data
+
+```{r}
+set.seed(123)
+
+## Read data
+
+boston.dboth <- read.csv("./data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston.dairport <- read.csv("./data/boston_dairport.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston.ddowntown <- read.csv("./data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+```
+
+```{r}
+# Split into train and test data
+ratio <- sample(1:nrow(boston.dboth), 0.7*nrow(boston.dboth))
+boston.dboth.train <- boston.dboth[ratio, ]
+boston.dboth.test <- boston.dboth[-ratio, ]
+```
+
+### EDA
+
+```{r, warning=FALSE}
+continuous_features <- c("bedrooms", "guests_included", "beds", "bathrooms", "minimum_nights", "accommodates", "number_of_reviews", "ddowntown", "dairport", "price")
+
+dmelt <- gather(select(boston.dboth, continuous_features), key=Variable, value=Value, -price)
+
+scatterwrap <- ggplot(aes(x=Value,y=price), data=dmelt) +
+  geom_point(color='#FF5503',alpha=.75) +
+  geom_smooth(se=F) + 
+  facet_wrap(~Variable, scales='free_x') +
+  labs(x='')
+
+scatterwrap
+```
+
+## Build Models
+
+### Single Predictors
+
+```{r}
+## Linear model
+lm1 <- gam(price ~ dairport, data=boston.dboth.train)
+summary(lm1)
+```
+
+```{r}
+## GAM model
+gam1 <- gam(price ~ s(dairport, bs="cr"), data=boston.dboth.train)
+summary(gam1)
+```
+
+```{r}
+# Model Comparison
+modcomp = data.frame(rbind(c(AIC(lm1), summary(lm1)$sp.criterion, summary(lm1)$r.sq),
+                           c(AIC(gam1), summary(gam1)$sp.criterion, summary(gam1)$r.sq)))
+colnames(modcomp) = c('AIC', 'GCV', 'R^2^')
+rownames(modcomp) = c('LM','GAM')
+modcomp
+
+anova(lm1, gam1, test="Chisq")
+```
+
+
+### Multiple Predictors
+
+```{r}
+# Linear model
+lm2 <- gam(price ~ dairport + ddowntown, data=boston.dboth.train)
+summary(lm2)
+```
+
+```{r}
+# GAM model
+gam2 <- gam(price ~ s(dairport) + s(ddowntown), data=boston.dboth.train)
+summary(gam2)
+
+visreg(gam2,
+       line=list(col="#1e90ff", lwd=2), 
+       points=list(cex=.25, col='#ff5503'), 
+       fill=list(col='gray90'), ask=F, bty='n', alpha=.5)
+```
+
+
+```{r}
+# Plot predictions
+
+fits <- predict(gam2, newdata=boston.dboth.test, type='response', se=T)
+predicts <- data.frame(boston.dboth.test, fits) %>% 
+  mutate(lower = fit - 1.96*se.fit,
+         upper = fit + 1.96*se.fit)
+
+plot_gam2_response <- ggplot(aes(x=dairport,y=fit), data=predicts) +
+  geom_ribbon(aes(ymin = lower, ymax=upper), fill='gray') +
+  geom_line(color='#1e90ff')
+plot_gam2_response
+```
+
+### Interaction model
+
+```{r}
+gam3 <- gam(price ~ te(dairport, ddowntown), data=boston.dboth.train)
+summary(gam3)
+```
+
+## Explore variable selection
+
+```{r}
+# Regular subset selection
+reg1 <- regsubsets(price~., data = boston.dboth.train, really.big = T)
+reg1.summary <- summary(reg1)
+
+par(mfrow = c(2,2))
+plot(reg1.summary$rss, xlab = "Number of variables", ylab = "Residual Sum of Squares (RSS)", type = "l")
+plot(reg1.summary$adjr2, xlab = "Number of variables", ylab = "Adjacent R square", type = "l")
+plot(reg1.summary$cp, xlab = "Number of variables", ylab = "CP", type = "l")
+plot(reg1.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
+
+which.min(reg1.summary$bic)
+# Results: property_type, bathrooms, bedrooms, ddowntown, dairport
+```
+
+```{r}
+null <- lm(price~1, data=boston.dboth.train)
+full <- lm(price~., data=boston.dboth.train)
+
+forward_selection <- step(null, scope=list(lower=null, upper=full), direction="forward")
+# Results: price ~ accommodates + neighborhood + bathrooms + property_type + room_type + bedrooms + instant_bookable + host_identity_verified + guests_included + is_business_travel_ready + number_of_reviews
+
+# The same predictors were got when "backward" and "both" directions for steps selctions as well.
+```
+
+
+### GAM based on the variable selection methods above
+
+```{r}
+# Variables selected from subset selection
+gam4 <- gam(price ~ property_type + s(bathrooms) + s(bedrooms, k=5) + s(ddowntown) + s(dairport), data=boston.dboth.train)
+summary(gam4)
+```
+
+```{r}
+# Variables selected from forward selection
+gam5 <- gam(price ~ s(accommodates) + neighborhood + s(bathrooms) + property_type + room_type + s(bedrooms, k=5) + instant_bookable + host_identity_verified + s(guests_included) + is_business_travel_ready + s(number_of_reviews), data=boston.dboth.train)
+summary(gam5)
+```
+
+### Variable selection within GAM
+
+```{r}
+gam6 <- gam(price ~ s(bedrooms, k=5) + s(guests_included) + s(beds) + s(bathrooms) + s(minimum_nights) + s(accommodates) + s(number_of_reviews) + s(ddowntown) + s(dairport) + host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + bed_type + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.dboth.train, select=T, method="REML")
+summary(gam6)
+```
+
+```{r}
+gam7 <- gam(price ~ s(bedrooms, k=5) + s(guests_included) + s(beds) + s(bathrooms) + s(minimum_nights) + s(accommodates) + s(number_of_reviews) + room_type + instant_bookable + property_type + host_identity_verified, data=boston.dboth.train, select=T, method="REML")
+summary(gam7)
+```
+
+```{r}
+# Model comparison
+anova(gam4, gam5, gam6, gam7, test="Chisq")
+```
