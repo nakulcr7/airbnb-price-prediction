@@ -31,19 +31,19 @@ set.seed(123)
 ## Read data
 
 # Original data
-boston <- read.csv("./data/boston_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
 
 # Neighbourhood -> Distance to airport and downtown
-boston.dboth <- read.csv("./data/boston_dboth_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston.dboth <- read.csv("./data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
 boston.dboth <- boston.dboth %>% select(-airport, -downtown)
 
 
 # Neighbourhood -> Distance to airport
-boston.dairport <- read.csv("./data/boston_dairport_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston.dairport <- read.csv("./data/boston_dairport.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
 boston.dairport <- boston.dairport %>% select(-airport, -downtown)
 
 # Neighbourhood -> Distance to downtown
-boston.ddowntown <- read.csv("./data/boston_ddowntown_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston.ddowntown <- read.csv("./data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
 boston.ddowntown <- boston.ddowntown %>% select(-airport, -downtown)
 ```
 
