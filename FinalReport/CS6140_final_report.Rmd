@@ -23,7 +23,7 @@ set.seed(100)
 # Import Data
 ```{r}
 # Choose whether to reprocess data
-reprocess = TRUE
+reprocess = FALSE
 reprocess = reprocess || !file.exists("../data/boston_data_raw.csv")
 reprocess = reprocess || !file.exists("../data/boston_data.csv")
 reprocess = reprocess || !file.exists("../data/boston_data_dummied.csv")
@@ -185,6 +185,7 @@ if (!reprocess) {
 
 # Divide data into training and validation sets
 ```{r}
+# Sample indices for training and validations sets
 num_rows <- nrow(boston.undummied)
 
 training <- sample(1:num_rows, floor(0.55 * num_rows))
@@ -199,9 +200,38 @@ rest <- (1:num_rows)[-c(training, model_selection, validation_1)]
 validation_2 <- sample(rest, floor(0.15 * num_rows))
 rest <- (1:num_rows)[-c(training, model_selection, validation_1, validation_2)]
 
+# Set datasets for each transformation
+boston.data.training <- boston.data[training, ]
+boston.data.model_selection <- boston.data[model_selection, ]
+boston.data.validation_1 <- boston.data[validation_1, ]
+boston.data.validation_2 <- boston.data[validation_2, ]
+boston.data.model_selection.test <- boston.data.model_selection[ , "price"]
+boston.data.validation_1.test <- boston.data.validation_1[ , "price"]
+boston.data.validation_2.test <- boston.data.validation_2[ , "price"]
 
+boston.dboth.training <- boston.dboth[training, ]
+boston.dboth.model_selection <- boston.dboth[model_selection, ]
+boston.dboth.validation_1 <- boston.dboth[validation_1, ]
+boston.dboth.validation_2 <- boston.dboth[validation_2, ]
+boston.dboth.model_selection.test <- boston.dboth.model_selection[ , "price"]
+boston.dboth.validation_1.test <- boston.dboth.validation_1[ , "price"]
+boston.dboth.validation_2.test <- boston.dboth.validation_2[ , "price"]
 
+boston.ddowntown.training <- boston.ddowntown[training, ]
+boston.ddowntown.model_selection <- boston.ddowntown[model_selection, ]
+boston.ddowntown.validation_1 <- boston.ddowntown[validation_1, ]
+boston.ddowntown.validation_2 <- boston.ddowntown[validation_2, ]
+boston.ddowntown.model_selection.test <- boston.ddowntown.model_selection[ , "price"]
+boston.ddowntown.validation_1.test <- boston.ddowntown.validation_1[ , "price"]
+boston.ddowntown.validation_2.test <- boston.ddowntown.validation_2[ , "price"]
 
+boston.dairport.training <- boston.dairport[training, ]
+boston.dairport.model_selection <- boston.dairport[model_selection, ]
+boston.dairport.validation_1 <- boston.dairport[validation_1, ]
+boston.dairport.validation_2 <- boston.dairport[validation_2, ]
+boston.dairport.model_selection.test <- boston.dairport.model_selection[ , "price"]
+boston.dairport.validation_1.test <- boston.dairport.validation_1[ , "price"]
+boston.dairport.validation_2.test <- boston.dairport.validation_2[ , "price"]
 ```
 
 
