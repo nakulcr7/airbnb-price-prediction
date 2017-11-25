@@ -15,6 +15,7 @@ library(gbm)
 library(tree)
 library(ISLR)
 library(MASS)
+library(ggmap)
 
 set.seed(100)
 ```
@@ -49,6 +50,8 @@ if (!reprocess) {
   boston.dboth.dummied <- read.csv("../data/boston_dboth_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.ddowntown.dummied <- read.csv("../data/boston_ddowntown_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.dairport.dummeied <- read.csv("../data/boston_dairport_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  
+  full.data <- read.csv("../data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
 } else {
   # Read in full dataset
@@ -175,9 +178,39 @@ if (!reprocess) {
 }
 ```
 
-
 # Preliminary Data Analysis
 ```{r}
+
+# changiing data for map visualization
+full.data$price <- as.numeric(gsub(",", "", substr(full.data$price, 2, length(full.data$price) - 1)))
+full.data <- full.data[!is.na(full.data$price),]
+price_summary = summary(full.data$price)
+
+# fetching data for map visualization
+states <- map_data("state")
+ma_df <- subset(states, region == "massachusetts")
+counties <- map_data("county")
+ma_county <- subset(counties, region == "massachusetts")
+ma_base <- ggplot(data = ma_df, mapping = aes(x = long, y = lat, group = group)) + coord_fixed(1.3) +  geom_polygon(color = "black", fill = "gray")
+ma_city<-ma_base + geom_polygon(data = ma_county, fill = NA, color = "white") +  geom_polygon(color = "black", fill = NA)  # get the state border back on top
+ma_city + geom_point(aes(x=longitude,y=latitude,group=zipcode,color="red"),data=full.data)
+map = get_map(location <- c(mean(full.data$longitude), mean(full.data$latitude)), zoom = 12, source = "google", maptype="roadmap")
+ggmap(map)+ geom_point(aes(x=longitude,y=latitude,group=zipcode,color="red"),data=full.data)
+
+# setting price categories
+for (i in 1:nrow(full.data))
+{
+  if (full.data$price[i]<price_summary[2])
+  {full.data$price_cat[i]=4}
+  if (full.data$price[i]>price_summary[2]&full.data$price[i]<price_summary[4])
+  {full.data$price_cat[i]=3}
+  if (full.data$price[i]>price_summary[4]&full.data$price[i]<price_summary[5])
+  {full.data$price_cat[i]=2}
+  if (price_summary[4]<full.data$price[i])
+  {full.data$price_cat[i]=1}
+}
+
+ggmap(map) + geom_point(aes(x=longitude,y=latitude,group=price_cat,color=price_cat),data=full.data)
 
 ```
 
