@@ -35,4 +35,8 @@ File descriptions:
   - data with chosen columns, empty values removed, categorical variables dummied, neighborhood column replaced by distance to downtown and airport
 
 
+[ boston_outliers.csv ]
+  - data with chosen columns, empty values removed, only rows with above 95th percentile price
+
+
 
