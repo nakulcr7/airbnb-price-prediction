@@ -186,7 +186,7 @@ if (!reprocess) {
 # Divide data into training and validation sets
 ```{r}
 # Sample indices for training and validations sets
-num_rows <- nrow(boston.undummied)
+num_rows <- nrow(boston.data)
 
 training <- sample(1:num_rows, floor(0.55 * num_rows))
 rest <- (1:num_rows)[-training]
@@ -249,7 +249,7 @@ boston.dairport.validation_2.test <- boston.dairport.validation_2[ , "price"]
 # boston.dairport_undummied
 # boston.dboth_undummied
 
-boston.undummied.boost <- gbm(price ~ ., boston.undummied[training, ], distribution="gaussian", n.trees=20000, cv.folds=5)
+boston.data.boost <- gbm(price ~ ., boston.data.training, distribution="gaussian", n.trees=10000, cv.folds=10)
 
 ```
 
