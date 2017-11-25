@@ -282,42 +282,42 @@ rmse <- function(test_data, model) {
 
 ### Neighborhood
 ```{r}
-gam.neighborhood <- gam(price ~ host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.data.training, select=T, method="REML")
+gam.neighborhood <- gam(price ~ host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + s(accommodates, bs="cs") + bathrooms + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + minimum_nights + number_of_reviews + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.data.training, select=T, method="REML")
 summary(gam.neighborhood)
-# R^2: 0616
+# R^2: 0.615
 
 gam.neighborhood.rmse <- rmse(boston.data.model_selection, gam.neighborhood)
-gam.neighborhood.rmse # 52.39106
+gam.neighborhood.rmse # 52.39049
 ```
 
 ### Distance to both airport and downtown
 ```{r}
-gam.dboth <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs") + s(dairport, bs="cs"), data=boston.dboth.training, select=T, method="REML")
+gam.dboth <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + bathrooms + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + minimum_nights + number_of_reviews + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs") + s(dairport, bs="cs"), data=boston.dboth.training, select=T, method="REML")
 summary(gam.dboth)
-# R^2: 0.609
+# R^2: 0.608
 
 gam.dboth.rmspe <- rmse(boston.dboth.model_selection, gam.dboth)
-gam.dboth.rmspe # 52.66352
+gam.dboth.rmspe # 52.65998
 ```
 
 ### Distance to airport
 ```{r}
-gam.dairport <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(dairport, bs="cs"), data=boston.dairport.training, select=T, method="REML")
+gam.dairport <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + bathrooms + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + minimum_nights + number_of_reviews + instant_bookable + is_business_travel_ready + cancellation_policy + s(dairport, bs="cs"), data=boston.dairport.training, select=T, method="REML")
 summary(gam.dairport)
-# R^2: 0.6
+# R^2: 0.599
 
 gam.dairport.rmse <- rmse(boston.dairport.model_selection, gam.dairport)
-gam.dairport.rmse # 52.80212
+gam.dairport.rmse # 52.78772
 ```
 
 ### Distance to downtown
 ```{r}
-gam.ddowntown <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs"), data=boston.ddowntown.train, select=T, method="REML")
+gam.ddowntown <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + bathrooms + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + number_of_reviews + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs"), data=boston.ddowntown.train, select=T, method="REML")
 summary(gam.ddowntown)
-# R^2: 0.596
+# R^2: 0.598
 
 gam.ddowntown.rmse <- rmse(boston.ddowntown.model_selection, gam.ddowntown)
-gam.ddowntown.rmse # 52.26675 
+gam.ddowntown.rmse # 52.28805
 ```
 
 ### Results of the best model on validation_1 datasets
@@ -325,7 +325,7 @@ gam.ddowntown.rmse # 52.26675
 ```{r}
 gam.best <- gam.ddowntown
 gam.best.rmse <- rmse(boston.ddowntown.validation_1, gam.best)
-gam.best.rmse # 57.43
+gam.best.rmse # 57.38265
 ```
 
 # Regression Trees
