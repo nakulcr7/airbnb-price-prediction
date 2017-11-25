@@ -1,0 +1,242 @@
+---
+title: "CS6140_final_report"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(dummies)
+library(gmapsdistance)
+library(hashmap)
+library(gbm)
+library(tree)
+library(ISLR)
+library(MASS)
+
+set.seed(100)
+```
+
+
+# Import Data
+```{r}
+# Choose whether to reprocess data
+reprocess = TRUE
+reprocess = reprocess || !file.exists("../data/boston_data_raw.csv")
+reprocess = reprocess || !file.exists("../data/boston_data.csv")
+reprocess = reprocess || !file.exists("../data/boston_data_dummied.csv")
+
+reprocess = reprocess || !file.exists("../data/boston_ddowntown.csv")
+reprocess = reprocess || !file.exists("../data/boston_dairport.csv")
+reprocess = reprocess || !file.exists("../data/boston_dboth.csv")
+
+reprocess = reprocess || !file.exists("../data/boston_ddowntown_dummied.csv")
+reprocess = reprocess || !file.exists("../data/boston_dairport_dummied.csv")
+reprocess = reprocess || !file.exists("../data/boston_dboth_dummied.csv")
+
+if (!reprocess) {
+  # Read in existing data from file
+  boston.data.raw <- read.csv("../data/boston_data_raw.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.data <- read.csv("../data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dummied <- read.csv("../data/boston_data_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  
+  boston.dboth <- read.csv("../data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.ddowntown<- read.csv("../data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dairport <- read.csv("../data/boston_dairport.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  
+  boston.dboth.dummied <- read.csv("../data/boston_dboth_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.ddowntown.dummied <- read.csv("../data/boston_ddowntown_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dairport.dummeied <- read.csv("../data/boston_dairport_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  
+} else {
+  # Read in full dataset
+  full.data <- read.csv("../data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  
+  
+  # Select features to keep
+  features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
+  boston.data.raw <- full.data[ , features_to_keep, drop=FALSE]
+  
+  
+  # Clean dataframe
+  ## Omit NA values
+  boston.data <- na.omit(boston.data.raw)
+  
+  ## Change price to numeric
+  boston.data$price <- as.numeric(gsub(",", "", substr(boston.data$price, 2, length(boston.data$price) - 1)))
+  
+  ## Rename neighbourhood_cleansed to neighborhood
+  names(boston.data)[names(boston.data) == "neighbourhood_cleansed"] <- "neighborhood"
+  
+  ## Keep up to 95th percentile of price
+  value = quantile(boston.data$price, c(.95))[[1]]
+  boston.data <- boston.data[boston.data$price <= value, ]
+  
+  
+  # Dummy categorical features
+  ## Remove categorical columns to be re-added
+  categorical <- c("host_is_superhost", "host_identity_verified", "neighborhood", "property_type", "room_type", "bed_type", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
+  boston.dummied <- boston.data %>% select(-one_of(categorical))
+  
+  ## host_is_superhost
+  boston.dummied <- cbind(boston.dummied, host_is_superhost=dummy(boston.data$host_is_superhost, sep="_")[ , -1])
+  
+  ## host_identity_verified
+  boston.dummied <- cbind(boston.dummied, host_identity_verified=dummy(boston.data$host_identity_verified, sep="_")[ , -1])
+  
+  ## instant_bookable
+  boston.dummied <- cbind(boston.dummied, instant_bookable=dummy(boston.data$instant_bookable, sep="_")[ , -1])
+  
+  ## is_business_travel_ready
+  boston.dummied <- cbind(boston.dummied, is_business_travel_ready=dummy(boston.data$is_business_travel_ready, sep="_")[ , -1])
+  
+  ## property_type
+  temp <- data.frame(dummy(boston.data$property_type))[ , -1]
+  boston.dummied <- cbind(boston.dummied, temp)
+  
+  ## room_type
+  temp <- data.frame(dummy(boston.data$room_type))[ , -1]
+  boston.dummied <- cbind(boston.dummied, temp)
+  
+  ## bed_type
+  temp <- data.frame(dummy(boston.data$bed_type))[ , -1]
+  boston.dummied <- cbind(boston.dummied, temp)
+  
+  ## cancellation_policy
+  temp <- data.frame(dummy(boston.data$cancellation_policy))[ , -1]
+  boston.dummied <- cbind(boston.dummied, temp)
+  
+  
+  # Construct distinct datasets
+
+  ## Dataset with distance to downtown and airport
+  boston.dboth.dummied <- boston.dummied
+  boston.dboth.dummied$ddowntown <- 0
+  boston.dboth.dummied$dairport <- 0
+  
+  boston.dboth <- boston.data
+  boston.dboth$downtown <- 0
+  boston.dboth$airport <- 0
+  
+  ### Calculate driving distance from property location to downtown/airport
+  ddowntown = hashmap(levels(boston.data$neighborhood), integer(length(levels(boston.data$neighborhood))))
+  dairport = hashmap(levels(boston.data$neighborhood), integer(length(levels(boston.data$neighborhood))))
+
+  for (i in 1:length(levels(boston.data$neighborhood))) {
+    print(i)
+    s <- levels(boston.data$neighborhood)[[i]]
+    s2 <- paste(s, ", Boston MA")
+    s2 <- gsub(" ", "+", s2, fixed=TRUE)
+    ddowntown[[s]] <- gmapsdistance(origin=s2, destination="42.3555925+-71.0624982", mode="driving")[[2]]
+    dairport[[s]] <- gmapsdistance(origin=s2, destination="42.3656171+-71.0117542", mode="driving")[[2]]
+  }
+  
+  for (i in 1:nrow(boston.dboth.dummied)) {
+    print(i)
+    boston.dboth.dummied[i, "ddowntown"] <- ddowntown[[boston.data$neighborhood[[i]]]]
+    boston.dboth.dummied[i, "dairport"] <- dairport[[boston.data$neighborhood[[i]]]]
+    
+    boston.dboth[i, "ddowntown"] <- ddowntown[[boston.data$neighborhood[[i]]]]
+    boston.dboth[i, "dairport"] <- dairport[[boston.data$neighborhood[[i]]]]
+  }
+  
+  ### Remove neighborhood columns
+  boston.dboth.dummied <- boston.dboth.dummied[ , !(names(boston.dboth.dummied) %in% c("neighborhood"))]
+  boston.dboth <- boston.dboth[ , !(names(boston.dboth) %in% c("neighborhood"))]
+  
+  ## Dataset with distance to downtown only
+  boston.ddowntown.dummied <- boston.dboth.dummied[ , !(names(boston.dboth.dummied) %in% c("dairport"))]
+  boston.ddowntown <- boston.dboth[ , !(names(boston.dboth) %in% c("dairport"))]
+  
+  ## Dataset with distance to airport only
+  boston.dairport.dummied <- boston.dboth.dummied[ , !(names(boston.dboth.dummied) %in% c("ddowntown"))]
+  boston.dairport <- boston.dboth[ , !(names(boston.dboth) %in% c("ddowntown"))]
+  
+  # Dummy neighborhood 
+  ## neighborhood
+  temp <- data.frame(dummy(boston.data$neighborhood))[ , -1]
+  boston.dummied <- cbind(boston.dummied, temp)
+  
+  
+  # Save data
+  write.csv(boston.data.raw, file="../data/boston_data_raw.csv")
+  write.csv(boston.data, file="../data/boston_data.csv")
+  write.csv(boston.dummied, file="../data/boston_data_dummied.csv")
+  
+  write.csv(boston.ddowntown, file="../data/boston_ddowntown.csv")
+  write.csv(boston.dairport, file="../data/boston_dairport.csv")
+  write.csv(boston.dboth, file="../data/boston_dboth.csv")
+  
+  write.csv(boston.ddowntown.dummied, file="../data/boston_ddowntown_dummied.csv")
+  write.csv(boston.dairport.dummied, file="../data/boston_dairport_dummied.csv")
+  write.csv(boston.dboth.dummied, file="../data/boston_dboth_dummied.csv")
+}
+```
+
+
+# Preliminary Data Analysis
+```{r}
+
+```
+
+
+
+# Divide data into training and validation sets
+```{r}
+num_rows <- nrow(boston.undummied)
+
+training <- sample(1:num_rows, floor(0.55 * num_rows))
+rest <- (1:num_rows)[-training]
+
+model_selection <- sample(rest, floor(0.15 * num_rows))
+rest <- (1:num_rows)[-c(training, model_selection)]
+
+validation_1 <- sample(rest, floor(0.15 * num_rows))
+rest <- (1:num_rows)[-c(training, model_selection, validation_1)]
+
+validation_2 <- sample(rest, floor(0.15 * num_rows))
+rest <- (1:num_rows)[-c(training, model_selection, validation_1, validation_2)]
+
+
+
+
+```
+
+
+# Linear Regression
+
+
+# GAM
+
+
+# Regression Trees
+
+```{r}
+# boston.undummied
+# boston.ddowntown_undummied
+# boston.dairport_undummied
+# boston.dboth_undummied
+
+boston.undummied.boost <- gbm(price ~ ., boston.undummied[training, ], distribution="gaussian", n.trees=20000, cv.folds=5)
+
+```
+
+```{r}
+gbm.perf(boston.undummied.boost)
+summary(boston.undummied.boost)
+par(mfrow=c(1, 3))
+plot(boston.undummied.boost, i="room_type")
+plot(boston.undummied.boost, i="neighborhood")
+plot(boston.undummied.boost, i="bedrooms")
+```
+
+```{r}
+test <- boston.undummied[validation_1, "price"]
+
+yhat <- predict(boston.undummied.boost, newdata=boston.undummied[validation_1, ])
+sqrt(mean((yhat - test)^2))
+```
+
+

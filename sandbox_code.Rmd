@@ -32,7 +32,7 @@ reprocess = reprocess || !file.exists("./data/boston_dboth_undummied.csv")
 
 if (!reprocess) {
   # Read in existing data from file
-  boston.undummied <- read.csv("./data/boston_data_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.undummied <- read.csv("./data/boston_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston <- read.csv("./data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.dboth <- read.csv("./data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.ddowntown <- read.csv("./data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
