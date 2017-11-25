@@ -104,8 +104,8 @@ if (!reprocess) {
   boston.dboth$dairport <- 0
   
   boston.dboth_undummied <- boston.undummied
-  boston.dboth_undummied$downtown <- 0
-  boston.dboth_undummied$airport <- 0
+  boston.dboth_undummied$ddowntown <- 0
+  boston.dboth_undummied$dairport <- 0
   
   ### Calculate driving distance from property location to downtown/airport
   ddowntown = hashmap(levels(boston.undummied$neighborhood), integer(length(levels(boston.undummied$neighborhood))))
@@ -248,3 +248,72 @@ preds = predict(ridge.model, s = bestlam.ridge, type = "coefficients")
 coef(ridge.model)
 ```
 
+
+## GAM test code
+
+### Single Predictors
+
+```{r}
+## Linear model
+lm1 <- gam(price ~ dairport, data=boston.dboth.train)
+summary(lm1)
+```
+
+```{r}
+## GAM model
+gam1 <- gam(price ~ s(dairport, bs="cr"), data=boston.dboth.train)
+summary(gam1)
+```
+
+```{r}
+# Model Comparison
+modcomp = data.frame(rbind(c(AIC(lm1), summary(lm1)$sp.criterion, summary(lm1)$r.sq),
+                           c(AIC(gam1), summary(gam1)$sp.criterion, summary(gam1)$r.sq)))
+colnames(modcomp) = c('AIC', 'GCV', 'R^2^')
+rownames(modcomp) = c('LM','GAM')
+modcomp
+
+anova(lm1, gam1, test="Chisq")
+```
+
+
+### Multiple Predictors
+
+```{r}
+# Linear model
+lm2 <- gam(price ~ dairport + ddowntown, data=boston.dboth.train)
+summary(lm2)
+```
+
+```{r}
+# GAM model
+gam2 <- gam(price ~ s(dairport) + s(ddowntown), data=boston.dboth.train)
+summary(gam2)
+
+visreg(gam2,
+       line=list(col="#1e90ff", lwd=2), 
+       points=list(cex=.25, col='#ff5503'), 
+       fill=list(col='gray90'), ask=F, bty='n', alpha=.5)
+```
+
+
+```{r}
+# Plot predictions
+
+fits <- predict(gam2, newdata=boston.dboth.test, type='response', se=T)
+predicts <- data.frame(boston.dboth.test, fits) %>% 
+  mutate(lower = fit - 1.96*se.fit,
+         upper = fit + 1.96*se.fit)
+
+plot_gam2_response <- ggplot(aes(x=dairport,y=fit), data=predicts) +
+  geom_ribbon(aes(ymin = lower, ymax=upper), fill='gray') +
+  geom_line(color='#1e90ff')
+plot_gam2_response
+```
+
+### Interaction model
+
+```{r}
+gam3 <- gam(price ~ te(dairport, ddowntown), data=boston.dboth.train)
+summary(gam3)
+```
