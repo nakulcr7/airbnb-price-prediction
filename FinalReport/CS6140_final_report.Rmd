@@ -38,6 +38,8 @@ reprocess = reprocess || !file.exists("../data/boston_ddowntown_dummied.csv")
 reprocess = reprocess || !file.exists("../data/boston_dairport_dummied.csv")
 reprocess = reprocess || !file.exists("../data/boston_dboth_dummied.csv")
 
+reprocess = reprocess || !file.exists("../data/boston_outliers.csv")
+
 if (!reprocess) {
   # Read in existing data from file
   boston.data.raw <- read.csv("../data/boston_data_raw.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
@@ -51,6 +53,8 @@ if (!reprocess) {
   boston.dboth.dummied <- read.csv("../data/boston_dboth_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.ddowntown.dummied <- read.csv("../data/boston_ddowntown_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.dairport.dummeied <- read.csv("../data/boston_dairport_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  
+  boston.outliers <- read.csv("../data/boston_outliers.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
   full.data <- read.csv("../data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
@@ -76,7 +80,9 @@ if (!reprocess) {
   
   ## Keep up to 95th percentile of price
   value = quantile(boston.data$price, c(.95))[[1]]
+  boston.outliers <- boston.data[boston.data$price > value, ]
   boston.data <- boston.data[boston.data$price <= value, ]
+  
   
   
   # Dummy categorical features
@@ -176,11 +182,13 @@ if (!reprocess) {
   write.csv(boston.ddowntown.dummied, file="../data/boston_ddowntown_dummied.csv")
   write.csv(boston.dairport.dummied, file="../data/boston_dairport_dummied.csv")
   write.csv(boston.dboth.dummied, file="../data/boston_dboth_dummied.csv")
+  
+  write.csv(boston.outliers, file="../data/boston_outliers.csv")
 }
 ```
 
-# Preliminary Data Analysis
 
+# Preliminary Data Analysis
 ```{r}
 # changiing data for map visualization
 full.data$price <- as.numeric(gsub(",", "", substr(full.data$price, 2, length(full.data$price) - 1)))
