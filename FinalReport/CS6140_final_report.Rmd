@@ -240,31 +240,93 @@ boston.dairport.validation_2.test <- boston.dairport.validation_2[ , "price"]
 
 
 # Regression Trees
-
+## Train each of the transformations
 ```{r}
-# boston.undummied
-# boston.ddowntown_undummied
-# boston.dairport_undummied
-# boston.dboth_undummied
-
-boston.data.boost <- gbm(price ~ ., boston.data.training, distribution="gaussian", n.trees=10000, cv.folds=10)
-
+boston.data.boost <- gbm(price ~ ., boston.data.training, distribution="gaussian", n.trees=10000, cv.folds=5)
+boston.dboth.boost <- gbm(price ~ ., boston.dboth.training, distribution="gaussian", n.trees=10000, cv.folds=5)
+boston.ddowntown.boost <- gbm(price ~ ., boston.ddowntown.training, distribution="gaussian", n.trees=10000, cv.folds=5)
+boston.dairport.boost <- gbm(price ~ ., boston.dairport.training, distribution="gaussian", n.trees=10000, cv.folds=5)
 ```
 
+## Results of neighborhoods
 ```{r}
-gbm.perf(boston.undummied.boost)
-summary(boston.undummied.boost)
+gbm.perf(boston.data.boost)
+summary(boston.data.boost)
 par(mfrow=c(1, 3))
-plot(boston.undummied.boost, i="room_type")
-plot(boston.undummied.boost, i="neighborhood")
-plot(boston.undummied.boost, i="bedrooms")
+plot(boston.data.boost, i=paste(summary(boston.data.boost, plotit=FALSE)$var[[1]], "", sep=""))
+plot(boston.data.boost, i=paste(summary(boston.data.boost, plotit=FALSE)$var[[2]], "", sep=""))
+plot(boston.data.boost, i=paste(summary(boston.data.boost, plotit=FALSE)$var[[3]], "", sep=""))
 ```
 
 ```{r}
-test <- boston.undummied[validation_1, "price"]
-
-yhat <- predict(boston.undummied.boost, newdata=boston.undummied[validation_1, ])
-sqrt(mean((yhat - test)^2))
+yhat <- predict(boston.data.boost, newdata=boston.data.validation_1)
+sqrt(mean((yhat - boston.data.validation_1.test)^2))
 ```
+
+## Results of dboth
+```{r}
+gbm.perf(boston.dboth.boost)
+summary(boston.dboth.boost)
+par(mfrow=c(1, 3))
+plot(boston.dboth.boost, i=paste(summary(boston.dboth.boost, plotit=FALSE)$var[[1]], "", sep=""))
+plot(boston.dboth.boost, i=paste(summary(boston.dboth.boost, plotit=FALSE)$var[[2]], "", sep=""))
+plot(boston.dboth.boost, i=paste(summary(boston.dboth.boost, plotit=FALSE)$var[[3]], "", sep=""))
+```
+
+```{r}
+yhat <- predict(boston.dboth.boost, newdata=boston.dboth.validation_1)
+sqrt(mean((yhat - boston.dboth.validation_1.test)^2))
+```
+
+## Results of ddowntown
+```{r}
+gbm.perf(boston.ddowntown.boost)
+summary(boston.ddowntown.boost)
+par(mfrow=c(1, 3))
+plot(boston.ddowntown.boost, i=paste(summary(boston.ddowntown.boost, plotit=FALSE)$var[[1]], "", sep=""))
+plot(boston.ddowntown.boost, i=paste(summary(boston.ddowntown.boost, plotit=FALSE)$var[[2]], "", sep=""))
+plot(boston.ddowntown.boost, i=paste(summary(boston.ddowntown.boost, plotit=FALSE)$var[[3]], "", sep=""))
+```
+
+```{r}
+yhat <- predict(boston.ddowntown.boost, newdata=boston.ddowntown.validation_1)
+sqrt(mean((yhat - boston.ddowntown.validation_1.test)^2))
+```
+
+## Results of dairport
+```{r}
+gbm.perf(boston.dairport.boost)
+summary(boston.dairport.boost)
+par(mfrow=c(1, 3))
+plot(boston.dairport.boost, i=paste(summary(boston.dairport.boost, plotit=FALSE)$var[[1]], "", sep=""))
+plot(boston.dairport.boost, i=paste(summary(boston.dairport.boost, plotit=FALSE)$var[[2]], "", sep=""))
+plot(boston.dairport.boost, i=paste(summary(boston.dairport.boost, plotit=FALSE)$var[[3]], "", sep=""))
+```
+
+```{r}
+yhat <- predict(boston.dairport.boost, newdata=boston.dairport.validation_1)
+sqrt(mean((yhat - boston.dairport.validation_1.test)^2))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
