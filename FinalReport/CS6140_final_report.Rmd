@@ -13,8 +13,6 @@ library(gmapsdistance)
 library(hashmap)
 library(gbm)
 library(tree)
-library(ISLR)
-library(MASS)
 
 set.seed(100)
 ```
@@ -23,7 +21,7 @@ set.seed(100)
 # Import Data
 ```{r}
 # Choose whether to reprocess data
-reprocess = FALSE
+reprocess = TRUE
 reprocess = reprocess || !file.exists("../data/boston_data_raw.csv")
 reprocess = reprocess || !file.exists("../data/boston_data.csv")
 reprocess = reprocess || !file.exists("../data/boston_data_dummied.csv")
@@ -117,8 +115,8 @@ if (!reprocess) {
   boston.dboth.dummied$dairport <- 0
   
   boston.dboth <- boston.data
-  boston.dboth$downtown <- 0
-  boston.dboth$airport <- 0
+  boston.dboth$ddowntown <- 0
+  boston.dboth$dairport <- 0
   
   ### Calculate driving distance from property location to downtown/airport
   ddowntown = hashmap(levels(boston.data$neighborhood), integer(length(levels(boston.data$neighborhood))))
