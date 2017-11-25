@@ -30,16 +30,66 @@ set.seed(123)
 
 ## Read data
 
-boston.dboth <- read.csv("./data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-boston.dairport <- read.csv("./data/boston_dairport.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-boston.ddowntown <- read.csv("./data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+# Original data
+boston <- read.csv("./data/boston_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+
+# Neighbourhood -> Distance to airport and downtown
+boston.dboth <- read.csv("./data/boston_dboth_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston.dboth <- boston.dboth %>% select(-airport, -downtown)
+
+
+# Neighbourhood -> Distance to airport
+boston.dairport <- read.csv("./data/boston_dairport_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston.dairport <- boston.dairport %>% select(-airport, -downtown)
+
+# Neighbourhood -> Distance to downtown
+boston.ddowntown <- read.csv("./data/boston_ddowntown_undummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+boston.ddowntown <- boston.ddowntown %>% select(-airport, -downtown)
 ```
 
 ```{r}
-# Split into train and test data
-ratio <- sample(1:nrow(boston.dboth), 0.7*nrow(boston.dboth))
-boston.dboth.train <- boston.dboth[ratio, ]
-boston.dboth.test <- boston.dboth[-ratio, ]
+# Make train, test and validation sets
+data_split <- function(df) {
+  # Train
+  train_ind <- sample(1:nrow(df), 0.6*nrow(df))
+  train_df <- df[train_ind, ]
+  
+  # Test + Validation
+  test_valid_df <- df[-train_ind, ]
+  test_ind <- sample(1:nrow(test_valid_df), 0.5*nrow(test_valid_df))
+  test_df <- test_valid_df[test_ind, ]
+  valid_df <- test_valid_df[-test_ind, ]
+  return(list(train=train_df, test=test_df, valid=valid_df))
+}
+
+# Split into train, test and validation data
+
+# original
+split <- data_split(boston)
+boston.train <- split$train
+boston.test <- split$test
+boston.valid <- split$valid
+
+
+# distance to airport and downtown
+split <- data_split(boston.dboth)
+boston.dboth.train <- split$train
+boston.dboth.test <- split$test
+boston.dboth.valid <- split$valid
+
+
+# distance to airport
+split <- data_split(boston.dboth)
+boston.dairport.train <- split$train
+boston.dairport.test <- split$test
+boston.dairport.valid <- split$valid
+
+
+# distance to downtown
+split <- data_split(boston.dboth)
+boston.ddowntown.train <- split$train
+boston.ddowntown.test <- split$test
+boston.ddowntown.valid <- split$valid
 ```
 
 ### EDA
@@ -60,74 +110,7 @@ scatterwrap
 
 ## Build Models
 
-### Single Predictors
-
-```{r}
-## Linear model
-lm1 <- gam(price ~ dairport, data=boston.dboth.train)
-summary(lm1)
-```
-
-```{r}
-## GAM model
-gam1 <- gam(price ~ s(dairport, bs="cr"), data=boston.dboth.train)
-summary(gam1)
-```
-
-```{r}
-# Model Comparison
-modcomp = data.frame(rbind(c(AIC(lm1), summary(lm1)$sp.criterion, summary(lm1)$r.sq),
-                           c(AIC(gam1), summary(gam1)$sp.criterion, summary(gam1)$r.sq)))
-colnames(modcomp) = c('AIC', 'GCV', 'R^2^')
-rownames(modcomp) = c('LM','GAM')
-modcomp
-
-anova(lm1, gam1, test="Chisq")
-```
-
-
-### Multiple Predictors
-
-```{r}
-# Linear model
-lm2 <- gam(price ~ dairport + ddowntown, data=boston.dboth.train)
-summary(lm2)
-```
-
-```{r}
-# GAM model
-gam2 <- gam(price ~ s(dairport) + s(ddowntown), data=boston.dboth.train)
-summary(gam2)
-
-visreg(gam2,
-       line=list(col="#1e90ff", lwd=2), 
-       points=list(cex=.25, col='#ff5503'), 
-       fill=list(col='gray90'), ask=F, bty='n', alpha=.5)
-```
-
-
-```{r}
-# Plot predictions
-
-fits <- predict(gam2, newdata=boston.dboth.test, type='response', se=T)
-predicts <- data.frame(boston.dboth.test, fits) %>% 
-  mutate(lower = fit - 1.96*se.fit,
-         upper = fit + 1.96*se.fit)
-
-plot_gam2_response <- ggplot(aes(x=dairport,y=fit), data=predicts) +
-  geom_ribbon(aes(ymin = lower, ymax=upper), fill='gray') +
-  geom_line(color='#1e90ff')
-plot_gam2_response
-```
-
-### Interaction model
-
-```{r}
-gam3 <- gam(price ~ te(dairport, ddowntown), data=boston.dboth.train)
-summary(gam3)
-```
-
-## Explore variable selection
+## Explore variable selection using linear models
 
 ```{r}
 # Regular subset selection
@@ -141,7 +124,7 @@ plot(reg1.summary$cp, xlab = "Number of variables", ylab = "CP", type = "l")
 plot(reg1.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
 
 which.min(reg1.summary$bic)
-# Results: property_type, bathrooms, bedrooms, ddowntown, dairport
+# Results: host_identity_verified, property_type, room_type, bathrooms, bedrooms, guests_included, ddowntown, dairport
 ```
 
 ```{r}
@@ -149,7 +132,7 @@ null <- lm(price~1, data=boston.dboth.train)
 full <- lm(price~., data=boston.dboth.train)
 
 forward_selection <- step(null, scope=list(lower=null, upper=full), direction="forward")
-# Results: price ~ accommodates + neighborhood + bathrooms + property_type + room_type + bedrooms + instant_bookable + host_identity_verified + guests_included + is_business_travel_ready + number_of_reviews
+# Results: price ~ accommodates + ddowntown + bathrooms + room_type + property_type + bedrooms + dairport + host_identity_verified + instant_bookable + guests_included + cancellation_policy + beds + number_of_reviews
 
 # The same predictors were got when "backward" and "both" directions for steps selctions as well.
 ```
@@ -159,29 +142,86 @@ forward_selection <- step(null, scope=list(lower=null, upper=full), direction="f
 
 ```{r}
 # Variables selected from subset selection
-gam4 <- gam(price ~ property_type + s(bathrooms) + s(bedrooms, k=5) + s(ddowntown) + s(dairport), data=boston.dboth.train)
+gam4 <- gam(price ~ host_identity_verified + property_type + room_type + s(bathrooms) + s(bedrooms, k=5) + s(guests_included) + s(ddowntown) + s(dairport), data=boston.dboth.train)
 summary(gam4)
+# GCV = 13343, Deviance Explained = 48.5%
 ```
 
 ```{r}
 # Variables selected from forward selection
-gam5 <- gam(price ~ s(accommodates) + neighborhood + s(bathrooms) + property_type + room_type + s(bedrooms, k=5) + instant_bookable + host_identity_verified + s(guests_included) + is_business_travel_ready + s(number_of_reviews), data=boston.dboth.train)
+gam5 <- gam(price ~ s(accommodates) + s(ddowntown) + s(bathrooms) + room_type + property_type + s(bedrooms, k=5) + s(dairport) + host_identity_verified + instant_bookable + s(guests_included) + cancellation_policy + s(beds) + s(number_of_reviews), data=boston.dboth.train)
 summary(gam5)
+# GCV = 13193, Deviance explained = 49.6%
 ```
 
 ### Variable selection within GAM
 
 ```{r}
-gam6 <- gam(price ~ s(bedrooms, k=5) + s(guests_included) + s(beds) + s(bathrooms) + s(minimum_nights) + s(accommodates) + s(number_of_reviews) + s(ddowntown) + s(dairport) + host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + bed_type + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.dboth.train, select=T, method="REML")
+gam6 <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates) + s(bathrooms) + s(bedrooms, k=5) + s(beds) + bed_type + s(guests_included) + s(minimum_nights) + s(number_of_reviews) + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown) + s(dairport), data=boston.dboth.train, select=T, method="REML")
 summary(gam6)
+# Deviance exlained = 49.8%
 ```
 
 ```{r}
-gam7 <- gam(price ~ s(bedrooms, k=5) + s(guests_included) + s(beds) + s(bathrooms) + s(minimum_nights) + s(accommodates) + s(number_of_reviews) + room_type + instant_bookable + property_type + host_identity_verified, data=boston.dboth.train, select=T, method="REML")
+gam7 <- gam(price ~ host_identity_verified + property_type + room_type + instant_bookable + s(accommodates) + s(bathrooms) + s(bedrooms, k=5) + s(beds) + s(guests_included) + s(minimum_nights) + s(number_of_reviews) + s(ddowntown) + s(dairport), data=boston.dboth.train, select=T, method="REML")
 summary(gam7)
+# Deviance exlained = 49.7%
 ```
 
 ```{r}
 # Model comparison
 anova(gam4, gam5, gam6, gam7, test="Chisq")
+# Model 5 is the best accoording to Chisq
+```
+
+
+### Model comparison on test data
+
+```{r}
+rmspe <- function(test_data, model) {
+  return(sqrt(mean((test_data$price - predict.gam(model, test_data)) ^ 2)))
+}
+
+gam4.rmspe <- rmspe(boston.dboth.test, gam4)
+gam5.rmspe <- rmspe(boston.dboth.test, gam5)
+gam6.rmspe <- rmspe(boston.dboth.test, gam6)
+gam7.rmspe <- rmspe(boston.dboth.test, gam7)
+gam4.rmspe # 141.8996
+gam5.rmspe # 146.0915
+gam6.rmspe # 144.1888
+gam7.rmspe # 144.2769
+which.min(c(gam4.rmspe, gam5.rmspe, gam6.rmspe, gam7.rmspe))
+```
+
+
+### Other models (variable selection within GAMs)
+
+#### Original
+```{r}
+gam8 <- gam(price ~ host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + s(accommodates) + s(bathrooms) + s(bedrooms, k=5) + s(beds) + bed_type + s(guests_included) + s(minimum_nights) + s(number_of_reviews) + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.train, select=T, method="REML")
+summary(gam8)
+# Deviance exlained = 45%
+
+gam8.rmspe <- rmspe(boston, gam8)
+gam8.rmspe # 123.9392
+```
+
+#### Distance to airport
+```{r}
+gam9 <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates) + s(bathrooms) + s(bedrooms, k=5) + s(beds) + bed_type + s(guests_included) + s(minimum_nights) + s(number_of_reviews) + instant_bookable + is_business_travel_ready + cancellation_policy + s(dairport), data=boston.dairport, select=T, method="REML")
+summary(gam9)
+# Deviance exlained = 40.9%
+
+gam9.rmspe <- rmspe(boston.diaport, gam9)
+gam9.rmspe # 123.9392
+```
+
+#### Distance to downtown
+```{r}
+gam10 <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates) + s(bathrooms) + s(bedrooms, k=5) + s(beds) + bed_type + s(guests_included) + s(minimum_nights) + s(number_of_reviews) + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown), data=boston.ddowntown, select=T, method="REML")
+summary(gam10)
+# Deviance exlained = 40.6%
+
+gam10.rmspe <- rmspe(boston.ddowntown, gam10)
+gam10.rmspe # 124.26
 ```
