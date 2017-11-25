@@ -175,10 +175,15 @@ if (!reprocess) {
 
 
 # Preliminary Data Analysis
+
+## Count Missing Values
+```{r}
+sum(is.na(boston.data.raw))
+```
+
 ```{r}
 
 ```
-
 
 
 # Divide data into training and validation sets
