@@ -12,14 +12,12 @@ library(dummies)
 library(gmapsdistance)
 library(hashmap)
 library(gbm)
-library(tree)
-library(ISLR)
-library(MASS)
 library(ggmap)
 library(mgcv)
 library(glmnet)
+library(tidyr)
 
-set.seed(100)
+set.seed(123)
 ```
 
 
@@ -39,6 +37,8 @@ reprocess = reprocess || !file.exists("../data/boston_ddowntown_dummied.csv")
 reprocess = reprocess || !file.exists("../data/boston_dairport_dummied.csv")
 reprocess = reprocess || !file.exists("../data/boston_dboth_dummied.csv")
 
+reprocess = reprocess || !file.exists("../data/boston_outliers.csv")
+
 if (!reprocess) {
   # Read in existing data from file
   boston.data.raw <- read.csv("../data/boston_data_raw.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
@@ -52,6 +52,8 @@ if (!reprocess) {
   boston.dboth.dummied <- read.csv("../data/boston_dboth_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.ddowntown.dummied <- read.csv("../data/boston_ddowntown_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.dairport.dummeied <- read.csv("../data/boston_dairport_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  
+  boston.outliers <- read.csv("../data/boston_outliers.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
   full.data <- read.csv("../data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
@@ -77,7 +79,9 @@ if (!reprocess) {
   
   ## Keep up to 95th percentile of price
   value = quantile(boston.data$price, c(.95))[[1]]
+  boston.outliers <- boston.data[boston.data$price > value, ]
   boston.data <- boston.data[boston.data$price <= value, ]
+  
   
   
   # Dummy categorical features
@@ -177,12 +181,14 @@ if (!reprocess) {
   write.csv(boston.ddowntown.dummied, file="../data/boston_ddowntown_dummied.csv")
   write.csv(boston.dairport.dummied, file="../data/boston_dairport_dummied.csv")
   write.csv(boston.dboth.dummied, file="../data/boston_dboth_dummied.csv")
+  
+  write.csv(boston.outliers, file="../data/boston_outliers.csv")
 }
 ```
 
+
 # Preliminary Data Analysis
 ```{r}
-
 # changiing data for map visualization
 full.data$price <- as.numeric(gsub(",", "", substr(full.data$price, 2, length(full.data$price) - 1)))
 full.data <- full.data[!is.na(full.data$price),]
@@ -213,10 +219,12 @@ for (i in 1:nrow(full.data))
 }
 
 ggmap(map) + geom_point(aes(x=longitude,y=latitude,group=price_cat,color=price_cat),data=full.data)
-
 ```
 
-
+## Count Missing Values
+```{r}
+sum(is.na(boston.data.raw))
+```
 
 # Divide data into training and validation sets
 ```{r}
@@ -362,48 +370,52 @@ rmse <- function(test_data, model) {
 ```{r}
 gam.neighborhood <- gam(price ~ host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.data.training, select=T, method="REML")
 summary(gam.neighborhood)
-# R^2: 0616
+# R^2: 0.610
 
 gam.neighborhood.rmse <- rmse(boston.data.model_selection, gam.neighborhood)
-gam.neighborhood.rmse # 52.39106
+gam.neighborhood.rmse # 55.14769
 ```
 
 ### Distance to both airport and downtown
 ```{r}
-gam.dboth <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs") + s(dairport, bs="cs"), data=boston.dboth.training, select=T, method="REML")
+gam.dboth <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + +s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs") + s(dairport, bs="cs"), data=boston.dboth.training, select=T, method="REML")
 summary(gam.dboth)
-# R^2: 0.609
+# R^2: 0.600
 
 gam.dboth.rmspe <- rmse(boston.dboth.model_selection, gam.dboth)
-gam.dboth.rmspe # 52.66352
+gam.dboth.rmspe # 55.77279
 ```
 
 ### Distance to airport
 ```{r}
-gam.dairport <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(dairport, bs="cs"), data=boston.dairport.training, select=T, method="REML")
+gam.dairport <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(dairport, bs="cs"), data=boston.dairport.training, select=T, method="REML")
 summary(gam.dairport)
-# R^2: 0.6
+# R^2: 0.596
 
 gam.dairport.rmse <- rmse(boston.dairport.model_selection, gam.dairport)
-gam.dairport.rmse # 52.80212
+gam.dairport.rmse # 56.23814
 ```
 
 ### Distance to downtown
 ```{r}
-gam.ddowntown <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs"), data=boston.ddowntown.train, select=T, method="REML")
+gam.ddowntown <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs"), data=boston.ddowntown.training, select=T, method="REML")
 summary(gam.ddowntown)
-# R^2: 0.596
+# R^2: 0.585
 
 gam.ddowntown.rmse <- rmse(boston.ddowntown.model_selection, gam.ddowntown)
-gam.ddowntown.rmse # 52.26675 
+gam.ddowntown.rmse # 58.05393
 ```
 
 ### Results of the best model on validation_1 datasets
 
 ```{r}
-gam.best <- gam.ddowntown
-gam.best.rmse <- rmse(boston.ddowntown.validation_1, gam.best)
-gam.best.rmse # 57.43
+gam.best <- gam.neighborhood
+gam.best.rmse <- rmse(boston.data.validation_1, gam.best)
+gam.best.rmse # 55.43666
+
+# Most important predictors:
+# Parametric: neighborhood, property_type, room_type, instant_bookable
+# Non-parametric: accommodates, bedrooms, guests_included
 ```
 
 # Regression Trees
