@@ -279,6 +279,7 @@ boston.dairport.validation_2.test <- boston.dairport.validation_2[ , "price"]
 
 
 # Linear Regression
+## Lasso Regression
 
 ```{r}
 
@@ -294,16 +295,16 @@ y.boston.dairport   <- boston.dairport.training$price
 
 grid = 10^seq(15,-2, length = 100)
 lasso.boston.data <- glmnet(x.boston.data,y.boston.data, alpha = 1, lambda = grid)
-plot(lasso.mod, main = "Lasso regression \n Boston Data", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+plot(lasso.boston.data, main = "Lasso regression \n Boston Data", label = TRUE, xvar = "lambda", xlim = c(-5,15))
 
-lasso.boston.ddowntown <- glmnet(x.boston.data,y.boston.ddowntown, alpha = 1, lambda = grid)
-plot(lasso.mod, main = "Lasso regression \n Boston Downtown Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+lasso.boston.ddowntown <- glmnet(x.boston.ddowntown,y.boston.ddowntown, alpha = 1, lambda = grid)
+plot(lasso.boston.ddowntown, main = "Lasso regression \n Boston Downtown Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
 
-lasso.boston.dairport <- glmnet(x.boston.data,y.boston.dairport, alpha = 1, lambda = grid)
-plot(lasso.mod, main = "Lasso regression \n Boston Airport Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+lasso.boston.dairport <- glmnet(x.boston.dairport,y.boston.dairport, alpha = 1, lambda = grid)
+plot(lasso.boston.dairport, main = "Lasso regression \n Boston Airport Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
 
-lasso.boston.dboth <- glmnet(x.boston.data,y.boston.dboth, alpha = 1, lambda = grid)
-plot(lasso.mod, main = "Lasso regression \n Boston Both Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+lasso.boston.dboth <- glmnet(x.boston.dboth,y.boston.dboth, alpha = 1, lambda = grid)
+plot(lasso.boston.dboth, main = "Lasso regression \n Boston Both Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
 
 ```
 
@@ -356,6 +357,72 @@ cat("MSE for Boston Data using Lasso", rmse(boston.data.validation_1, lasso.mode
 cat("MSE for Boston Downtown Data using Lasso", rmse(boston.ddowntown.validation_1, lasso.model.ddowntown), "$\n")
 cat("MSE for Boston Airport Data using Lasso", rmse(boston.dairport.validation_1, lasso.model.dairport), "$\n")
 cat("MSE for Boston Both Data using Lasso", rmse(boston.dboth.validation_1, lasso.model.dboth), "$\n")
+```
+
+## Ridge Regression
+
+```{r}
+grid = 10^seq(15,-2, length = 100)
+ridge.boston.data <- glmnet(x.boston.data,y.boston.data, alpha = 0, lambda = grid)
+plot(ridge.boston.data, main = "Ridge regression \n Boston Data", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+
+ridge.boston.ddowntown <- glmnet(x.boston.ddowntown,y.boston.ddowntown, alpha = 0, lambda = grid)
+plot(ridge.boston.ddowntown, main = "Ridge regression \n Boston Downtown Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+
+ridge.boston.dairport <- glmnet(x.boston.dairport,y.boston.dairport, alpha = 0, lambda = grid)
+plot(ridge.boston.dairport, main = "Ridge regression \n Boston Airport Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+
+ridge.boston.dboth <- glmnet(x.boston.dboth,y.boston.dboth, alpha = 0, lambda = grid)
+plot(ridge.boston.dboth, main = "Ridge regression \n Boston Both Distance", label = TRUE, xvar = "lambda", xlim = c(-5,15))
+```
+
+```{r}
+cv.out.data <- cv.glmnet(x.boston.data,y.boston.data,alpha = 0)
+plot(cv.out.data)
+
+cv.out.ddowntown <- cv.glmnet(x.boston.ddowntown,y.boston.ddowntown,alpha = 0)
+plot(cv.out.ddowntown)
+
+cv.out.dairport <- cv.glmnet(x.boston.dairport,y.boston.dairport,alpha = 0)
+plot(cv.out.dairport)
+
+cv.out.dboth <- cv.glmnet(x.boston.dboth,y.boston.dboth,alpha = 0)
+plot(cv.out.dboth)
+```
+
+
+```{r}
+bestlam.ridge.data <- cv.out.data$lambda.min
+cat("Best lambda Boston Data" , bestlam.ridge.data, "\n")
+cat("Best log lambda Boston Data", log(bestlam.ridge.data), "\n")
+
+bestlam.ridge.ddowntown <- cv.out.ddowntown$lambda.min
+cat("Best lambda Boston Downtown" , bestlam.ridge.ddowntown, "\n")
+cat("Best log lambda Boston Downtown" , log(bestlam.ridge.ddowntown), "\n")
+
+bestlam.ridge.dairport <- cv.out.dairport$lambda.min
+cat("Best lambda Boston Airport" , bestlam.ridge.dairport, "\n")
+cat("Best log lambda Boston Airport" , log(bestlam.ridge.dairport), "\n")
+
+bestlam.ridge.dboth <- cv.out.dboth$lambda.min
+cat("Best lambda Boston Both" , bestlam.ridge.dboth, "\n")
+cat("Best log lambda Boston Both" , log(bestlam.ridge.dboth), "\n")
+```
+
+```{r}
+ridge.model.data <- glmnet(x.boston.data, y.boston.data, alpha=1, lambda = bestlam.ridge.data)
+ridge.model.ddowntown <- glmnet(x.boston.ddowntown, y.boston.ddowntown, alpha=1, lambda = bestlam.ridge.ddowntown)
+ridge.model.dairport <- glmnet(x.boston.dairport, y.boston.dairport, alpha=1, lambda = bestlam.ridge.dairport)
+ridge.model.dboth <- glmnet(x.boston.dboth, y.boston.dboth, alpha=1, lambda = bestlam.ridge.dboth)
+
+rmse <- function(test_data, model) {
+  return(sqrt(mean((test_data$price - predict(model, newx = model.matrix(price~.,test_data)[,-5]))^ 2)))
+}
+
+cat("MSE for Boston Data using Ridge", rmse(boston.data.validation_1, ridge.model.data), "$\n")
+cat("MSE for Boston Downtown Data using Ridge", rmse(boston.ddowntown.validation_1, ridge.model.ddowntown), "$\n")
+cat("MSE for Boston Airport Data using Ridge", rmse(boston.dairport.validation_1, ridge.model.dairport), "$\n")
+cat("MSE for Boston Both Data using Ridge", rmse(boston.dboth.validation_1, ridge.model.dboth), "$\n")
 ```
 
 # GAM
