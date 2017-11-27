@@ -435,7 +435,7 @@ rmse <- function(test_data, model) {
 
 ### Neighborhood
 ```{r}
-gam.neighborhood <- gam(price ~ host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.data.training, select=T, method="REML")
+gam.neighborhood <- gam(price ~ host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.data.training, method="REML")
 summary(gam.neighborhood)
 # R^2: 0.610
 
@@ -445,7 +445,7 @@ gam.neighborhood.rmse # 55.14769
 
 ### Distance to both airport and downtown
 ```{r}
-gam.dboth <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + +s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs") + s(dairport, bs="cs"), data=boston.dboth.training, select=T, method="REML")
+gam.dboth <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + +s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs") + s(dairport, bs="cs"), data=boston.dboth.training, method="REML")
 summary(gam.dboth)
 # R^2: 0.600
 
@@ -455,7 +455,7 @@ gam.dboth.rmspe # 55.77279
 
 ### Distance to airport
 ```{r}
-gam.dairport <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(dairport, bs="cs"), data=boston.dairport.training, select=T, method="REML")
+gam.dairport <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(dairport, bs="cs"), data=boston.dairport.training, method="REML")
 summary(gam.dairport)
 # R^2: 0.596
 
@@ -465,7 +465,7 @@ gam.dairport.rmse # 56.23814
 
 ### Distance to downtown
 ```{r}
-gam.ddowntown <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs"), data=boston.ddowntown.training, select=T, method="REML")
+gam.ddowntown <- gam(price ~ host_is_superhost + host_identity_verified + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy + s(ddowntown, bs="cs"), data=boston.ddowntown.training, method="REML")
 summary(gam.ddowntown)
 # R^2: 0.585
 
