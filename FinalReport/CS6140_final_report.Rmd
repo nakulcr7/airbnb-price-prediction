@@ -477,8 +477,8 @@ gam.ddowntown.rmse # 58.05393
 
 ```{r}
 gam.best <- gam.neighborhood
-gam.best.rmse <- rmse(boston.data.validation_1, gam.best)
-gam.best.rmse # 55.43666
+gam.best.v1_rmse <- rmse(boston.data.validation_1, gam.best)
+gam.best.v1_rmse # 55.43666
 
 # Most important predictors:
 # Parametric: neighborhood, property_type, room_type, instant_bookable
@@ -555,7 +555,12 @@ sqrt(mean((yhat - boston.dairport.validation_1.test)^2))
 ```
 
 
-
+# Best Model
+## Results of the overall best model(GAM - Original) on validation_2 dataset:
+```{r}
+gam.best.v2_rmse <- rmse(boston.data.validation_2, gam.best)
+gam.best.v2_rmse # 52.29939
+```
 
 
 
