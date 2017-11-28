@@ -16,6 +16,7 @@ library(ggmap)
 library(mgcv)
 library(glmnet)
 library(tidyr)
+#library(googleway)
 
 set.seed(123)
 ```
@@ -39,6 +40,22 @@ reprocess = reprocess || !file.exists("../data/boston_dboth_dummied.csv")
 
 reprocess = reprocess || !file.exists("../data/boston_outliers.csv")
 
+#key <- "AIzaSyAD1g6QxYLtpUpJvAGRLA00j9WcEzjJlj0"
+
+#get_transit_dist <- function(origin_lat, origin_lng){
+#  orig <- paste(toString(origin_lat), "+", toString(origin_lng), sep= "")
+#  transits <- google_places(location = c(origin_lat,origin_lng),
+#                            place_type = 'transit_station',
+#                            radius = 5000,
+#                            key = key)
+#  lats <- transits$results$geometry$location$lat[1]
+#  logs <- transits$results$geometry$location$lng[1]
+#  transit <- paste(toString(lats), "+", toString(logs), sep="")
+#  dist <- gmapsdistance(origin = orig, destination = transit, mode = "walking")
+#  return(dist)
+#}
+
+
 if (!reprocess) {
   # Read in existing data from file
   boston.data.raw <- read.csv("../data/boston_data_raw.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
@@ -61,6 +78,9 @@ if (!reprocess) {
   # Read in full dataset
   full.data <- read.csv("../data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
+  #for (i in 1:nrow(full.data)) {
+  #  full.data[i, "dtransit"] <- get_transit_dist(full.data$longitude[i], full.data$latitude[i])
+  #}
   
   # Select features to keep
   features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
@@ -134,7 +154,6 @@ if (!reprocess) {
   dairport = hashmap(levels(boston.data$neighborhood), integer(length(levels(boston.data$neighborhood))))
 
   for (i in 1:length(levels(boston.data$neighborhood))) {
-    print(i)
     s <- levels(boston.data$neighborhood)[[i]]
     s2 <- paste(s, ", Boston MA")
     s2 <- gsub(" ", "+", s2, fixed=TRUE)
@@ -143,7 +162,6 @@ if (!reprocess) {
   }
   
   for (i in 1:nrow(boston.dboth.dummied)) {
-    print(i)
     boston.dboth.dummied[i, "ddowntown"] <- ddowntown[[boston.data$neighborhood[[i]]]]
     boston.dboth.dummied[i, "dairport"] <- dairport[[boston.data$neighborhood[[i]]]]
     
@@ -275,23 +293,75 @@ boston.dairport.validation_2 <- boston.dairport[validation_2, ]
 boston.dairport.model_selection.test <- boston.dairport.model_selection[ , "price"]
 boston.dairport.validation_1.test <- boston.dairport.validation_1[ , "price"]
 boston.dairport.validation_2.test <- boston.dairport.validation_2[ , "price"]
+
+
+#Dummied
+boston.dummied.training <- boston.dummied[training, ][,-1]
+boston.dummied.model_selection <- boston.dummied[model_selection, ][,-1]
+boston.dummied.validation_1 <- boston.dummied[validation_1, ][,-1]
+boston.dummied.validation_2 <- boston.dummied[validation_2, ][,-1]
+boston.dummied.model_selection.test <- boston.dummied.model_selection[ , "price"]
+boston.dummied.validation_1.test <- boston.dummied.validation_1[ , "price"]
+boston.dummied.validation_2.test <- boston.dummied.validation_2[ , "price"]
+
+boston.dboth.dummied.training <- boston.dboth.dummied[training, ][,-1]
+boston.dboth.dummied.model_selection <- boston.dboth.dummied[model_selection, ][,-1]
+boston.dboth.dummied.validation_1 <- boston.dboth.dummied[validation_1, ][,-1]
+boston.dboth.dummied.validation_2 <- boston.dboth.dummied[validation_2, ][,-1]
+boston.dboth.dummied.model_selection.test <- boston.dboth.dummied.model_selection[ , "price"]
+boston.dboth.dummied.validation_1.test <- boston.dboth.dummied.validation_1[ , "price"]
+boston.dboth.dummied.validation_2.test <- boston.dboth.dummied.validation_2[ , "price"]
+
+boston.ddowntown.dummied.training <- boston.ddowntown.dummied[training, ][,-1]
+boston.ddowntown.dummied.model_selection <- boston.ddowntown.dummied[model_selection, ][,-1]
+boston.ddowntown.dummied.validation_1 <- boston.ddowntown.dummied[validation_1, ][,-1]
+boston.ddowntown.dummied.validation_2 <- boston.ddowntown.dummied[validation_2, ][,-1]
+boston.ddowntown.dummied.model_selection.test <- boston.ddowntown.dummied.model_selection[ , "price"]
+boston.ddowntown.dummied.validation_1.test <- boston.ddowntown.dummied.validation_1[ , "price"]
+boston.ddowntown.dummied.validation_2.test <- boston.ddowntown.dummied.validation_2[ , "price"]
+
+boston.dairport.dummied.training <- boston.dairport.dummied[training, ][,-1]
+boston.dairport.dummied.model_selection <- boston.dairport.dummied[model_selection, ][,-1]
+boston.dairport.dummied.validation_1 <- boston.dairport.dummied[validation_1, ][,-1]
+boston.dairport.dummied.validation_2 <- boston.dairport.dummied[validation_2, ][,-1]
+boston.dairport.dummied.model_selection.test <- boston.dairport.dummied.model_selection[ , "price"]
+boston.dairport.dummied.validation_1.test <- boston.dairport.dummied.validation_1[ , "price"]
+boston.dairport.dummied.validation_2.test <- boston.dairport.dummied.validation_2[ , "price"]
+```
+```{r}
+
 ```
 
 
 # Linear Regression
+
+```{r}
+lm_train <- lm(price~.,data = boston.dummied.training)
+qqnorm(lm_train$residuals, main = "Normal qqplot of residuals")
+qqline(lm_train$residuals)
+
+library(leaps)
+regfit.full <- regsubsets(price~., data = boston.dummied.training, really.big = T)
+reg.summary <- summary(regfit.full)
+reg.summary
+
+```
+
+
 ## Lasso Regression
+
 
 ```{r}
 
-x.boston.data   <- model.matrix(price~.,boston.data.training)[,-5]
-x.boston.dboth  <- model.matrix(price~.,boston.dboth.training)[,-5]
-x.boston.ddowntown  <- model.matrix(price~.,boston.ddowntown.training)[,-5]
-x.boston.dairport   <- model.matrix(price~.,boston.dairport.training)[,-5]
+x.boston.data   <- model.matrix(price~.,boston.dummied.training)
+x.boston.dboth  <- model.matrix(price~.,boston.dboth.dummied.training)
+x.boston.ddowntown  <- model.matrix(price~.,boston.ddowntown.dummied.training)
+x.boston.dairport   <- model.matrix(price~.,boston.dairport.dummied.training)
 
-y.boston.data   <- boston.data.training$price
-y.boston.dboth  <- boston.dboth.training$price
-y.boston.ddowntown  <- boston.ddowntown.training$price
-y.boston.dairport   <- boston.dairport.training$price
+y.boston.data   <- boston.dummied.training$price
+y.boston.dboth  <- boston.dboth.dummied.training$price
+y.boston.ddowntown  <- boston.ddowntown.dummied.training$price
+y.boston.dairport   <- boston.dairport.dummied.training$price
 
 grid = 10^seq(15,-2, length = 100)
 lasso.boston.data <- glmnet(x.boston.data,y.boston.data, alpha = 1, lambda = grid)
@@ -350,13 +420,13 @@ lasso.model.dairport <- glmnet(x.boston.dairport, y.boston.dairport, alpha=1, la
 lasso.model.dboth <- glmnet(x.boston.dboth, y.boston.dboth, alpha=1, lambda = bestlam.lasso.dboth)
 
 rmse <- function(test_data, model) {
-  return(sqrt(mean((test_data$price - predict(model, newx = model.matrix(price~.,test_data)[,-5]))^ 2)))
+  return(sqrt(mean((test_data$price - predict(model, newx = model.matrix(price~.,test_data)))^ 2)))
 }
 
-cat("MSE for Boston Data using Lasso", rmse(boston.data.validation_1, lasso.model.data), "$\n")
-cat("MSE for Boston Downtown Data using Lasso", rmse(boston.ddowntown.validation_1, lasso.model.ddowntown), "$\n")
-cat("MSE for Boston Airport Data using Lasso", rmse(boston.dairport.validation_1, lasso.model.dairport), "$\n")
-cat("MSE for Boston Both Data using Lasso", rmse(boston.dboth.validation_1, lasso.model.dboth), "$\n")
+cat("MSE for Boston Data using Lasso", rmse(boston.dummied.model_selection, lasso.model.data), "$\n")
+cat("MSE for Boston Downtown Data using Lasso", rmse(boston.ddowntown.dummied.model_selection, lasso.model.ddowntown), "$\n")
+cat("MSE for Boston Airport Data using Lasso", rmse(boston.dairport.dummied.model_selection, lasso.model.dairport), "$\n")
+cat("MSE for Boston Both Data using Lasso", rmse(boston.dboth.dummied.model_selection, lasso.model.dboth), "$\n")
 ```
 
 ## Ridge Regression
@@ -416,14 +486,21 @@ ridge.model.dairport <- glmnet(x.boston.dairport, y.boston.dairport, alpha=1, la
 ridge.model.dboth <- glmnet(x.boston.dboth, y.boston.dboth, alpha=1, lambda = bestlam.ridge.dboth)
 
 rmse <- function(test_data, model) {
-  return(sqrt(mean((test_data$price - predict(model, newx = model.matrix(price~.,test_data)[,-5]))^ 2)))
+  return(sqrt(mean((test_data$price - predict(model, newx = model.matrix(price~.,test_data)))^ 2)))
 }
 
-cat("MSE for Boston Data using Ridge", rmse(boston.data.validation_1, ridge.model.data), "$\n")
-cat("MSE for Boston Downtown Data using Ridge", rmse(boston.ddowntown.validation_1, ridge.model.ddowntown), "$\n")
-cat("MSE for Boston Airport Data using Ridge", rmse(boston.dairport.validation_1, ridge.model.dairport), "$\n")
-cat("MSE for Boston Both Data using Ridge", rmse(boston.dboth.validation_1, ridge.model.dboth), "$\n")
+cat("MSE for Boston Data using Ridge", rmse(boston.dummied.model_selection, ridge.model.data), "$\n")
+cat("MSE for Boston Downtown Data using Ridge", rmse(boston.ddowntown.dummied.model_selection, ridge.model.ddowntown), "$\n")
+cat("MSE for Boston Airport Data using Ridge", rmse(boston.dairport.dummied.model_selection, ridge.model.dairport), "$\n")
+cat("MSE for Boston Both Data using Ridge", rmse(boston.dboth.dummied.model_selection, ridge.model.dboth), "$\n")
 ```
+
+```{r}
+cat("MSE for Boston Data using Lasso - Validation Set 1", rmse(boston.dummied.validation_1, lasso.model.data), "$\n")
+cat("MSE for Boston Data using Lasso - Validation Set 2", rmse(boston.dummied.validation_2, lasso.model.data), "$\n")
+predict(lasso.model.data, s = bestlam.lasso.data, type = "coefficients")[1:63,]
+```
+
 
 # GAM
 
