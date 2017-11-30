@@ -16,10 +16,10 @@ library(ggmap)
 library(mgcv)
 library(glmnet)
 library(tidyr)
+library(leaps)
 
 set.seed(123)
 ```
-
 
 # Import Data
 ```{r}
@@ -188,8 +188,10 @@ if (!reprocess) {
 
 
 # Preliminary Data Analysis
-```{r}
-# changiing data for map visualization
+```{r, warning=FALSE}
+# Visualizing the dataset on a map
+
+# changing data for map visualization
 full.data$price <- as.numeric(gsub(",", "", substr(full.data$price, 2, length(full.data$price) - 1)))
 full.data <- full.data[!is.na(full.data$price),]
 price_summary = summary(full.data$price)
@@ -218,28 +220,35 @@ for (i in 1:nrow(full.data))
   {full.data$price_cat[i]=1}
 }
 
+# plot map
 ggmap(map) + geom_point(aes(x=longitude,y=latitude,group=price_cat,color=price_cat),data=full.data)
 ```
+
 
 ## Count Missing Values
 ```{r}
 sum(is.na(boston.data.raw))
 ```
 
+
 # Divide data into training and validation sets
 ```{r}
 # Sample indices for training and validations sets
 num_rows <- nrow(boston.data)
 
+# 55% training
 training <- sample(1:num_rows, floor(0.55 * num_rows))
 rest <- (1:num_rows)[-training]
 
+# 15% model selection
 model_selection <- sample(rest, floor(0.15 * num_rows))
 rest <- (1:num_rows)[-c(training, model_selection)]
 
+# 15% validation #1
 validation_1 <- sample(rest, floor(0.15 * num_rows))
 rest <- (1:num_rows)[-c(training, model_selection, validation_1)]
 
+# 15% validation #2
 validation_2 <- sample(rest, floor(0.15 * num_rows))
 rest <- (1:num_rows)[-c(training, model_selection, validation_1, validation_2)]
 
@@ -279,6 +288,7 @@ boston.dairport.validation_2.test <- boston.dairport.validation_2[ , "price"]
 
 
 # Linear Regression
+
 ## Lasso Regression
 
 ```{r}
@@ -353,10 +363,10 @@ rmse <- function(test_data, model) {
   return(sqrt(mean((test_data$price - predict(model, newx = model.matrix(price~.,test_data)[,-5]))^ 2)))
 }
 
-cat("MSE for Boston Data using Lasso", rmse(boston.data.validation_1, lasso.model.data), "$\n")
-cat("MSE for Boston Downtown Data using Lasso", rmse(boston.ddowntown.validation_1, lasso.model.ddowntown), "$\n")
-cat("MSE for Boston Airport Data using Lasso", rmse(boston.dairport.validation_1, lasso.model.dairport), "$\n")
-cat("MSE for Boston Both Data using Lasso", rmse(boston.dboth.validation_1, lasso.model.dboth), "$\n")
+cat("RMSE for Boston Data using Lasso", rmse(boston.data.validation_1, lasso.model.data), "$\n")
+cat("RMSE for Boston Downtown Data using Lasso", rmse(boston.ddowntown.validation_1, lasso.model.ddowntown), "$\n")
+cat("RMSE for Boston Airport Data using Lasso", rmse(boston.dairport.validation_1, lasso.model.dairport), "$\n")
+cat("RMSE for Boston Both Data using Lasso", rmse(boston.dboth.validation_1, lasso.model.dboth), "$\n")
 ```
 
 ## Ridge Regression
@@ -428,12 +438,81 @@ cat("MSE for Boston Both Data using Ridge", rmse(boston.dboth.validation_1, ridg
 # GAM
 
 ```{r}
+# Helper function
+
+## @param test_data: data frame representing the test dataset
+## @param model: GAM to be evaluated
+## @returns: the root mean square error of the given GAM's predictions
 rmse <- function(test_data, model) {
   return(sqrt(mean((test_data$price - predict.gam(model, test_data)) ^ 2)))
 }
 ```
 
-### Neighborhood
+## Variable selection methods
+
+Exploring three variable selection methods on the original dataset.
+
+### Regression subset selction
+```{r}
+reg1 <- regsubsets(price~., data = boston.data.training, really.big = T)
+reg1.summary <- summary(reg1)
+
+par(mfrow = c(2,2))
+plot(reg1.summary$rss, xlab = "Number of variables", ylab = "Residual Sum of Squares (RSS)", type = "l")
+plot(reg1.summary$adjr2, xlab = "Number of variables", ylab = "Adjacent R square", type = "l")
+plot(reg1.summary$cp, xlab = "Number of variables", ylab = "CP", type = "l")
+plot(reg1.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
+
+which.min(reg1.summary$bic)
+
+# Results: neighborhood, room_type, bedrooms
+```
+
+```{r}
+# GAM based on the above predictors
+gam.var1 <- gam(price ~ neighborhood + room_type +s(bedrooms, k=5, bs="cr"), data=boston.data.training, method="REML")
+summary(gam.var1)
+# R^2: 0.563
+
+gam.var1.rmse <- rmse(boston.data.model_selection, gam.var1)
+gam.var1.rmse # 57.4993
+```
+
+### Forward Selection
+```{r}
+null <- lm(price~1, data=boston.data.training)
+full <- lm(price~., data=boston.data.training)
+
+forward_selection <- step(null, scope=list(lower=null, upper=full), direction="forward")
+# Results: price ~ room_type + accommodates + neighborhood + bedrooms + property_type + cancellation_policy + instant_bookable + guests_included + bathrooms + minimum_nights + number_of_reviews + is_business_travel_ready + host_identity_verified + host_is_superhost
+
+# The same predictors were obtained when "backward" and "both" directions for steps selctions as well.
+
+# GAM based on the above predictors
+gam.var2 <- gam(price ~ room_type + accommodates + neighborhood + bedrooms + property_type + cancellation_policy + instant_bookable + s(guests_included, bs="cr") + s(bathrooms, bs="cr") + s(minimum_nights, bs="cr") + s(number_of_reviews, bs="cr") + is_business_travel_ready + host_identity_verified + host_is_superhost, data=boston.data.training, method="REML")
+summary(gam.var2)
+# R^2: 0.609
+
+gam.var2.rmse <- rmse(boston.data.model_selection, gam.var2)
+gam.var2.rmse # 58.11913
+```
+
+
+### Shrinkage method within GAM
+```{r}
+gam.var3 <- gam(price ~ host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.data.training, method="REML")
+summary(gam.var3)
+# R^2: 0.610
+
+gam.var3.rmse <- rmse(boston.data.model_selection, gam.var3)
+gam.var3.rmse # 55.14769
+```
+
+Since, the shrinkage method of variable selection has the best RMSE, it will be adopted as the variable selection method henceforth.
+
+## GAM on all the datasets
+
+### Original dataset
 ```{r}
 gam.neighborhood <- gam(price ~ host_is_superhost + host_identity_verified + neighborhood + property_type + room_type + s(accommodates, bs="cs") + s(bathrooms, bs="cs") + s(bedrooms, k=5, bs="cs") + s(beds, bs="cs") + bed_type + s(guests_included, bs="cs") + s(minimum_nights, bs="cs") + s(number_of_reviews, bs="cs") + instant_bookable + is_business_travel_ready + cancellation_policy, data=boston.data.training, method="REML")
 summary(gam.neighborhood)
@@ -556,7 +635,7 @@ sqrt(mean((yhat - boston.dairport.validation_1.test)^2))
 
 
 # Best Model
-## Results of the overall best model(GAM - Original) on validation_2 dataset:
+## Results of the overall best model(GAM - Original dataset) on validation_2 dataset:
 ```{r}
 gam.best.v2_rmse <- rmse(boston.data.validation_2, gam.best)
 gam.best.v2_rmse # 52.29939
