@@ -188,7 +188,15 @@ if (!reprocess) {
 
 
 # Preliminary Data Analysis
+
 ```{r, warning=FALSE}
+# Outlier investigation
+summary(boston.data$price)
+sqrt(var(boston.data$price))
+prices.with.outliers <- as.numeric(gsub(",", "", substr(boston.data.raw$price, 2, length(boston.data.raw$price) - 1)))
+plot(prices.with.outliers, xlab="row entry", ylab="price")
+abline(h=400, col="orange")
+
 # Visualizing the dataset on a map
 
 # changing data for map visualization
