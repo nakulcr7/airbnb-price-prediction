@@ -68,7 +68,7 @@ if (!reprocess) {
   
   boston.dboth.dummied <- read.csv("../data/boston_dboth_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   boston.ddowntown.dummied <- read.csv("../data/boston_ddowntown_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  boston.dairport.dummeied <- read.csv("../data/boston_dairport_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dairport.dummied <- read.csv("../data/boston_dairport_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
   boston.outliers <- read.csv("../data/boston_outliers.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
@@ -328,9 +328,6 @@ boston.dairport.dummied.model_selection.test <- boston.dairport.dummied.model_se
 boston.dairport.dummied.validation_1.test <- boston.dairport.dummied.validation_1[ , "price"]
 boston.dairport.dummied.validation_2.test <- boston.dairport.dummied.validation_2[ , "price"]
 ```
-```{r}
-
-```
 
 
 # Linear Regression
@@ -339,12 +336,36 @@ boston.dairport.dummied.validation_2.test <- boston.dairport.dummied.validation_
 lm_train <- lm(price~.,data = boston.dummied.training)
 qqnorm(lm_train$residuals, main = "Normal qqplot of residuals")
 qqline(lm_train$residuals)
+summary(lm_train)
+
+```
+```{r}
 
 library(leaps)
 regfit.full <- regsubsets(price~., data = boston.dummied.training, really.big = T)
 reg.summary <- summary(regfit.full)
 reg.summary
 
+```
+
+```{r}
+par(mfrow = c(2,2))
+plot(reg.summary$rss, xlab = "Number of variables", ylab = "Residual Sum of Squares (RSS)", type = "l")
+plot(reg.summary$adjr2, xlab = "Number of variables", ylab = "Adjacent R square", type = "l")
+plot(reg.summary$cp, xlab = "Number of variables", ylab = "CP", type = "l")
+plot(reg.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
+```
+
+```{r}
+which.min(reg.summary$bic)
+```
+8 predictors from Best Subset
+
+```{r}
+# linear model based on 8 predictors
+subset.model <- lm(price ~ room_type.Private.room + room_type.Shared.room + accommodates + bedrooms + instant_bookable + cancellation_policy.strict + ddowntown + dairport, data = boston.dboth.dummied.training)
+# coefficients of the predictors
+coef(regfit.full, 8)
 ```
 
 
@@ -497,10 +518,47 @@ cat("MSE for Boston Both Data using Ridge", rmse(boston.dboth.dummied.model_sele
 
 ```{r}
 cat("MSE for Boston Data using Lasso - Validation Set 1", rmse(boston.dummied.validation_1, lasso.model.data), "$\n")
-cat("MSE for Boston Data using Lasso - Validation Set 2", rmse(boston.dummied.validation_2, lasso.model.data), "$\n")
-predict(lasso.model.data, s = bestlam.lasso.data, type = "coefficients")[1:63,]
+cat("MSE for Boston Downtown Data using Lasso - Validation Set 1", rmse(boston.ddowntown.dummied.validation_1, lasso.model.ddowntown), "$\n")
+cat("MSE for Boston Airport Data using Lasso - Validation Set 1", rmse(boston.dairport.dummied.validation_1, lasso.model.dairport), "$\n")
+cat("MSE for Boston Both Data using Lasso - Validation Set 1", rmse(boston.dboth.dummied.validation_1, lasso.model.dboth), "$\n")
+
+a = predict(lasso.model.data, s = bestlam.lasso.data, type = "coefficients")
+cat("Predictors for Lasso Boston Data", nrow(a), "\n")
+a = predict(lasso.model.ddowntown, s = bestlam.lasso.ddowntown, type = "coefficients")
+cat("Predictors for Lasso Boston Data", nrow(a), "\n")
+a = predict(lasso.model.dairport, s = bestlam.lasso.dairport, type = "coefficients")
+cat("Predictors for Lasso Boston Data", nrow(a), "\n")
+a = predict(lasso.model.dboth, s = bestlam.lasso.dboth, type = "coefficients")
+cat("Predictors for Lasso Boston Data", nrow(a), "\n")
 ```
 
+```{r}
+
+plot_predicts <-function(predicted_price, real_price, text, color){
+  plot(x = real_price, y = predict_price, xlab = "actual price",
+  ylab = "predicted prices", main = text,xlim= c(0,500), ylim= c(0,500), col = color, asp=1)
+  abline(a = 0, b = 1)
+  
+}
+par(mfrow=c(2,2))
+predict_price = predict(lasso.model.data, newx = model.matrix(price~.,boston.dummied.model_selection))
+real_price = boston.dummied.model_selection$price
+plot_predicts(predict_price, real_price, "Lasso prediction for Boston Data", "red")
+
+
+predict_price = predict(lasso.model.ddowntown, newx = model.matrix(price~.,boston.ddowntown.dummied.model_selection))
+real_price = boston.dummied.model_selection$price
+plot_predicts(predict_price, real_price, "Lasso prediction for Boston Downtown Data", "blue")
+
+predict_price = predict(lasso.model.dairport, newx = model.matrix(price~.,boston.dairport.dummied.model_selection))
+real_price = boston.dummied.model_selection$price
+plot_predicts(predict_price, real_price, "Lasso prediction for Boston Airport Data", "green")
+
+
+predict_price = predict(lasso.model.dboth, newx = model.matrix(price~.,boston.dboth.dummied.model_selection))
+real_price = boston.dummied.model_selection$price
+plot_predicts(predict_price, real_price, "Lasso prediction for Boston Both Data", "orange")
+```
 
 # GAM
 
