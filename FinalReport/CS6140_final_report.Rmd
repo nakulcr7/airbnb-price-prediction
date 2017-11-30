@@ -189,6 +189,15 @@ if (!reprocess) {
 
 # Preliminary Data Analysis
 ```{r}
+summary(boston.data$price)
+sqrt(var(boston.data$price))
+prices.with.outliers <- as.numeric(gsub(",", "", substr(boston.data.raw$price, 2, length(boston.data.raw$price) - 1)))
+plot(prices.with.outliers, xlab="row entry", ylab="price")
+abline(h=400, col="orange")
+```
+
+
+```{r}
 # changiing data for map visualization
 full.data$price <- as.numeric(gsub(",", "", substr(full.data$price, 2, length(full.data$price) - 1)))
 full.data <- full.data[!is.na(full.data$price),]
