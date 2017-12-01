@@ -16,7 +16,6 @@ library(ggmap)
 library(mgcv)
 library(glmnet)
 library(tidyr)
-#library(googleway)
 library(leaps)
 
 
@@ -41,22 +40,6 @@ reprocess = reprocess || !file.exists("../data/boston_dboth_dummied.csv")
 
 reprocess = reprocess || !file.exists("../data/boston_outliers.csv")
 
-#key <- "AIzaSyAD1g6QxYLtpUpJvAGRLA00j9WcEzjJlj0"
-
-#get_transit_dist <- function(origin_lat, origin_lng){
-#  orig <- paste(toString(origin_lat), "+", toString(origin_lng), sep= "")
-#  transits <- google_places(location = c(origin_lat,origin_lng),
-#                            place_type = 'transit_station',
-#                            radius = 5000,
-#                            key = key)
-#  lats <- transits$results$geometry$location$lat[1]
-#  logs <- transits$results$geometry$location$lng[1]
-#  transit <- paste(toString(lats), "+", toString(logs), sep="")
-#  dist <- gmapsdistance(origin = orig, destination = transit, mode = "walking")
-#  return(dist)
-#}
-
-
 if (!reprocess) {
   # Read in existing data from file
   boston.data.raw <- read.csv("../data/boston_data_raw.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
@@ -78,10 +61,6 @@ if (!reprocess) {
 } else {
   # Read in full dataset
   full.data <- read.csv("../data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  
-  #for (i in 1:nrow(full.data)) {
-  #  full.data[i, "dtransit"] <- get_transit_dist(full.data$longitude[i], full.data$latitude[i])
-  #}
   
   # Select features to keep
   features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
@@ -230,9 +209,7 @@ counties <- map_data("county")
 ma_county <- subset(counties, region == "massachusetts")
 ma_base <- ggplot(data = ma_df, mapping = aes(x = long, y = lat, group = group)) + coord_fixed(1.3) +  geom_polygon(color = "black", fill = "gray")
 ma_city<-ma_base + geom_polygon(data = ma_county, fill = NA, color = "white") +  geom_polygon(color = "black", fill = NA)  # get the state border back on top
-ma_city + geom_point(aes(x=longitude,y=latitude,group=zipcode,color="red"),data=full.data)
 map = get_map(location <- c(mean(full.data$longitude), mean(full.data$latitude)), zoom = 12, source = "google", maptype="roadmap")
-ggmap(map)+ geom_point(aes(x=longitude,y=latitude,group=zipcode,color="red"),data=full.data)
 
 # setting price categories
 for (i in 1:nrow(full.data))
@@ -350,6 +327,7 @@ boston.dairport.dummied.validation_2.test <- boston.dairport.dummied.validation_
 
 # Linear Regression
 
+## QQ Plot
 ```{r}
 lm_train <- lm(price~.,data = boston.dummied.training)
 qqnorm(lm_train$residuals, main = "Normal qqplot of residuals")
@@ -357,14 +335,17 @@ qqline(lm_train$residuals)
 summary(lm_train)
 
 ```
+
+We can see that the assumption the variables are linear are somewhat valid, except from the long tails at both ends.
+
 ```{r}
 
 library(leaps)
 regfit.full <- regsubsets(price~., data = boston.dummied.training, really.big = T)
 reg.summary <- summary(regfit.full)
 reg.summary
-
 ```
+
 
 ```{r}
 par(mfrow = c(2,2))
@@ -377,7 +358,7 @@ plot(reg.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
 ```{r}
 which.min(reg.summary$bic)
 ```
-8 predictors from Best Subset
+TOP 8 predictors according to best subset are :
 
 ```{r}
 # linear model based on 8 predictors
@@ -386,8 +367,9 @@ subset.model <- lm(price ~ room_type.Private.room + room_type.Shared.room + acco
 coef(regfit.full, 8)
 ```
 
-## Lasso Regression
+All predictors and Best subset were only used to understand our data better, now to implement linear regression we focus on two majoe approaches - lasso and ridge
 
+## Lasso Regression
 
 ```{r}
 
@@ -457,14 +439,6 @@ lasso.model.ddowntown <- glmnet(x.boston.ddowntown, y.boston.ddowntown, alpha=1,
 lasso.model.dairport <- glmnet(x.boston.dairport, y.boston.dairport, alpha=1, lambda = bestlam.lasso.dairport)
 lasso.model.dboth <- glmnet(x.boston.dboth, y.boston.dboth, alpha=1, lambda = bestlam.lasso.dboth)
 
-rmse <- function(test_data, model) {
-  return(sqrt(mean((test_data$price - predict(model, newx = model.matrix(price~.,test_data)))^ 2)))
-}
-
-cat("RMSE for Boston Data using Lasso", rmse(boston.dummied.model_selection, lasso.model.data), "$\n")
-cat("RMSE for Boston Downtown Data using Lasso", rmse(boston.ddowntown.dummied.model_selection, lasso.model.ddowntown), "$\n")
-cat("RMSE for Boston Airport Data using Lasso", rmse(boston.dairport.dummied.model_selection, lasso.model.dairport), "$\n")
-cat("RMSE for Boston Both Data using Lasso", rmse(boston.dboth.dummied.model_selection, lasso.model.dboth), "$\n")
 ```
 
 ## Ridge Regression
@@ -522,11 +496,19 @@ ridge.model.data <- glmnet(x.boston.data, y.boston.data, alpha=1, lambda = bestl
 ridge.model.ddowntown <- glmnet(x.boston.ddowntown, y.boston.ddowntown, alpha=1, lambda = bestlam.ridge.ddowntown)
 ridge.model.dairport <- glmnet(x.boston.dairport, y.boston.dairport, alpha=1, lambda = bestlam.ridge.dairport)
 ridge.model.dboth <- glmnet(x.boston.dboth, y.boston.dboth, alpha=1, lambda = bestlam.ridge.dboth)
+```
 
+```{r}
 rmse <- function(test_data, model) {
   return(sqrt(mean((test_data$price - predict(model, newx = model.matrix(price~.,test_data)))^ 2)))
 }
 
+print("LASSO")
+cat("RMSE for Boston Data using Lasso", rmse(boston.dummied.model_selection, lasso.model.data), "$\n")
+cat("RMSE for Boston Downtown Data using Lasso", rmse(boston.ddowntown.dummied.model_selection, lasso.model.ddowntown), "$\n")
+cat("RMSE for Boston Airport Data using Lasso", rmse(boston.dairport.dummied.model_selection, lasso.model.dairport), "$\n")
+cat("RMSE for Boston Both Data using Lasso", rmse(boston.dboth.dummied.model_selection, lasso.model.dboth), "$\n")
+print("RIDGE")
 cat("RMSE for Boston Data using Ridge", rmse(boston.dummied.model_selection, ridge.model.data), "$\n")
 cat("RMSE for Boston Downtown Data using Ridge", rmse(boston.ddowntown.dummied.model_selection, ridge.model.ddowntown), "$\n")
 cat("RMSE for Boston Airport Data using Ridge", rmse(boston.dairport.dummied.model_selection, ridge.model.dairport), "$\n")
@@ -542,26 +524,24 @@ cat("RMSE for Boston Both Data using Lasso - Validation Set 1", rmse(boston.dbot
 a = predict(lasso.model.data, s = bestlam.lasso.data, type = "coefficients")
 cat("Predictors for Lasso Boston Data", nrow(a), "\n")
 a = predict(lasso.model.ddowntown, s = bestlam.lasso.ddowntown, type = "coefficients")
-cat("Predictors for Lasso Boston Data", nrow(a), "\n")
+cat("Predictors for Lasso Boston Donwtown", nrow(a), "\n")
 a = predict(lasso.model.dairport, s = bestlam.lasso.dairport, type = "coefficients")
-cat("Predictors for Lasso Boston Data", nrow(a), "\n")
+cat("Predictors for Lasso Boston Airport", nrow(a), "\n")
 a = predict(lasso.model.dboth, s = bestlam.lasso.dboth, type = "coefficients")
-cat("Predictors for Lasso Boston Data", nrow(a), "\n")
+cat("Predictors for Lasso Boston Both", nrow(a), "\n")
 ```
 
 ```{r}
 
 plot_predicts <-function(predicted_price, real_price, text, color){
   plot(x = real_price, y = predict_price, xlab = "actual price",
-  ylab = "predicted prices", main = text,xlim= c(0,500), ylim= c(0,500), col = color, asp=1)
+  ylab = "predicted price", main = text,xlim= c(0,500), ylim= c(0,500), col = color, asp=1)
   abline(a = 0, b = 1)
-  
 }
 par(mfrow=c(2,2))
 predict_price = predict(lasso.model.data, newx = model.matrix(price~.,boston.dummied.model_selection))
 real_price = boston.dummied.model_selection$price
 plot_predicts(predict_price, real_price, "Lasso prediction for Boston Data", "red")
-
 
 predict_price = predict(lasso.model.ddowntown, newx = model.matrix(price~.,boston.ddowntown.dummied.model_selection))
 real_price = boston.dummied.model_selection$price
@@ -588,6 +568,15 @@ plot_predicts(predict_price, real_price, "Lasso prediction for Boston Both Data"
 rmse <- function(test_data, model) {
   return(sqrt(mean((test_data$price - predict.gam(model, test_data)) ^ 2)))
 }
+
+plot_predicts_gam <-function(test_data, model, text, color){
+  real_price = test_data$price
+  predict_price = predict.gam(model, test_data)
+  plot(x = real_price, y = predict_price, xlab = "actual price",
+  ylab = "predicted price", main = text,xlim= c(0,500), ylim= c(0,500), col= color, asp=1)
+  abline(a = 0, b = 1)
+}
+
 ```
 
 ## Variable selection methods
@@ -705,6 +694,9 @@ gam.best.v1_rmse # 55.43666
 # Parametric: neighborhood, property_type, room_type, instant_bookable
 # Non-parametric: accommodates, bedrooms, guests_included
 ```
+```{r}
+plot_predicts_gam(boston.data.validation_1, gam.best, "GAM on Validation Set 1", "red")
+```
 
 # Regression Trees
 ## Train each of the transformations
@@ -728,6 +720,7 @@ plot(boston.data.boost, i=paste(summary(boston.data.boost, plotit=FALSE)$var[[3]
 ```{r}
 yhat <- predict(boston.data.boost, newdata=boston.data.validation_1)
 sqrt(mean((yhat - boston.data.validation_1.test)^2))
+plot_predicts(yhat, boston.data.validation_1$price, "Trees on Boston Data Validation Set 1", "red")
 ```
 
 ## Results of dboth
@@ -743,6 +736,7 @@ plot(boston.dboth.boost, i=paste(summary(boston.dboth.boost, plotit=FALSE)$var[[
 ```{r}
 yhat <- predict(boston.dboth.boost, newdata=boston.dboth.validation_1)
 sqrt(mean((yhat - boston.dboth.validation_1.test)^2))
+plot_predicts(yhat, boston.dboth.validation_1$price, "Trees on Boston Both Data Validation Set 1", "red")
 ```
 
 ## Results of ddowntown
@@ -758,6 +752,7 @@ plot(boston.ddowntown.boost, i=paste(summary(boston.ddowntown.boost, plotit=FALS
 ```{r}
 yhat <- predict(boston.ddowntown.boost, newdata=boston.ddowntown.validation_1)
 sqrt(mean((yhat - boston.ddowntown.validation_1.test)^2))
+plot_predicts(yhat, boston.ddowntown.validation_1$price, "Trees on Boston Downtown Data Validation Set 1", "red")
 ```
 
 ## Results of dairport
@@ -773,6 +768,7 @@ plot(boston.dairport.boost, i=paste(summary(boston.dairport.boost, plotit=FALSE)
 ```{r}
 yhat <- predict(boston.dairport.boost, newdata=boston.dairport.validation_1)
 sqrt(mean((yhat - boston.dairport.validation_1.test)^2))
+plot_predicts(yhat, boston.dairport.validation_1$price, "Trees on Boston Airport Data Validation Set 1", "red")
 ```
 
 
@@ -781,24 +777,5 @@ sqrt(mean((yhat - boston.dairport.validation_1.test)^2))
 ```{r}
 gam.best.v2_rmse <- rmse(boston.data.validation_2, gam.best)
 gam.best.v2_rmse # 52.29939
+plot_predicts_gam(boston.data.validation_2, gam.best, "GAM best on validation set 2", "red")
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
