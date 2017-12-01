@@ -1,5 +1,5 @@
 ---
-title: "CS6140_final_report"
+title: "Appendix"
 output: pdf_document
 ---
 
@@ -18,7 +18,7 @@ library(glmnet)
 library(tidyr)
 #library(googleway)
 library(leaps)
-=======
+
 
 set.seed(123)
 ```
