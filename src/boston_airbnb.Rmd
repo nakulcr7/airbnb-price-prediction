@@ -26,41 +26,41 @@ set.seed(123)
 ```{r}
 # Choose whether to reprocess data
 reprocess = FALSE
-reprocess = reprocess || !file.exists("../data/boston_data_raw.csv")
-reprocess = reprocess || !file.exists("../data/boston_data.csv")
-reprocess = reprocess || !file.exists("../data/boston_data_dummied.csv")
+reprocess = reprocess || !file.exists("data/boston_data_raw.csv")
+reprocess = reprocess || !file.exists("data/boston_data.csv")
+reprocess = reprocess || !file.exists("data/boston_data_dummied.csv")
 
-reprocess = reprocess || !file.exists("../data/boston_ddowntown.csv")
-reprocess = reprocess || !file.exists("../data/boston_dairport.csv")
-reprocess = reprocess || !file.exists("../data/boston_dboth.csv")
+reprocess = reprocess || !file.exists("data/boston_ddowntown.csv")
+reprocess = reprocess || !file.exists("data/boston_dairport.csv")
+reprocess = reprocess || !file.exists("data/boston_dboth.csv")
 
-reprocess = reprocess || !file.exists("../data/boston_ddowntown_dummied.csv")
-reprocess = reprocess || !file.exists("../data/boston_dairport_dummied.csv")
-reprocess = reprocess || !file.exists("../data/boston_dboth_dummied.csv")
+reprocess = reprocess || !file.exists("data/boston_ddowntown_dummied.csv")
+reprocess = reprocess || !file.exists("data/boston_dairport_dummied.csv")
+reprocess = reprocess || !file.exists("data/boston_dboth_dummied.csv")
 
-reprocess = reprocess || !file.exists("../data/boston_outliers.csv")
+reprocess = reprocess || !file.exists("data/boston_outliers.csv")
 
 if (!reprocess) {
   # Read in existing data from file
-  boston.data.raw <- read.csv("../data/boston_data_raw.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  boston.data <- read.csv("../data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  boston.dummied <- read.csv("../data/boston_data_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.data.raw <- read.csv("data/boston_data_raw.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.data <- read.csv("data/boston_data.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dummied <- read.csv("data/boston_data_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
-  boston.dboth <- read.csv("../data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  boston.ddowntown<- read.csv("../data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  boston.dairport <- read.csv("../data/boston_dairport.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dboth <- read.csv("data/boston_dboth.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.ddowntown<- read.csv("data/boston_ddowntown.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dairport <- read.csv("data/boston_dairport.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
-  boston.dboth.dummied <- read.csv("../data/boston_dboth_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  boston.ddowntown.dummied <- read.csv("../data/boston_ddowntown_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
-  boston.dairport.dummied <- read.csv("../data/boston_dairport_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dboth.dummied <- read.csv("data/boston_dboth_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.ddowntown.dummied <- read.csv("data/boston_ddowntown_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.dairport.dummied <- read.csv("data/boston_dairport_dummied.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
-  boston.outliers <- read.csv("../data/boston_outliers.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  boston.outliers <- read.csv("data/boston_outliers.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
-  full.data <- read.csv("../data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  full.data <- read.csv("data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
 } else {
   # Read in full dataset
-  full.data <- read.csv("../data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
+  full.data <- read.csv("data/listings.csv", sep = ",", header=TRUE, na.strings=c("", " ", "NA"))
   
   # Select features to keep
   features_to_keep <- c("host_is_superhost", "host_identity_verified", "neighbourhood_cleansed", "property_type", "room_type", "accommodates", "bathrooms", "bedrooms", "beds", "bed_type", "price", "guests_included", "minimum_nights", "number_of_reviews", "instant_bookable", "is_business_travel_ready", "cancellation_policy")
@@ -168,19 +168,19 @@ if (!reprocess) {
   
   
   # Save data
-  write.csv(boston.data.raw, file="../data/boston_data_raw.csv")
-  write.csv(boston.data, file="../data/boston_data.csv")
-  write.csv(boston.dummied, file="../data/boston_data_dummied.csv")
+  write.csv(boston.data.raw, file="data/boston_data_raw.csv")
+  write.csv(boston.data, file="data/boston_data.csv")
+  write.csv(boston.dummied, file="data/boston_data_dummied.csv")
   
-  write.csv(boston.ddowntown, file="../data/boston_ddowntown.csv")
-  write.csv(boston.dairport, file="../data/boston_dairport.csv")
-  write.csv(boston.dboth, file="../data/boston_dboth.csv")
+  write.csv(boston.ddowntown, file="data/boston_ddowntown.csv")
+  write.csv(boston.dairport, file="data/boston_dairport.csv")
+  write.csv(boston.dboth, file="data/boston_dboth.csv")
   
-  write.csv(boston.ddowntown.dummied, file="../data/boston_ddowntown_dummied.csv")
-  write.csv(boston.dairport.dummied, file="../data/boston_dairport_dummied.csv")
-  write.csv(boston.dboth.dummied, file="../data/boston_dboth_dummied.csv")
+  write.csv(boston.ddowntown.dummied, file="data/boston_ddowntown_dummied.csv")
+  write.csv(boston.dairport.dummied, file="data/boston_dairport_dummied.csv")
+  write.csv(boston.dboth.dummied, file="data/boston_dboth_dummied.csv")
   
-  write.csv(boston.outliers, file="../data/boston_outliers.csv")
+  write.csv(boston.outliers, file="data/boston_outliers.csv")
 }
 ```
 
